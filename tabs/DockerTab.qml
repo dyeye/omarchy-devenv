@@ -67,14 +67,16 @@ Item {
           width: composeUpText.implicitWidth + Style.space(12)
           height: Style.space(24)
           radius: Style.cornerRadius
-          color: upMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+          color: upMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.25) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+          border.color: upMouse.containsMouse ? Color.accent : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+          border.width: 1
 
           RowLayout {
             id: composeUpText
             anchors.centerIn: parent
             spacing: Style.space(4)
-            Text { text: "󰐊"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.foreground }
-            Text { text: "Compose Up"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.foreground }
+            Text { text: "󰐊"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: upMouse.containsMouse ? Color.accent : Color.foreground }
+            Text { text: "Compose Up"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: upMouse.containsMouse ? Color.accent : Color.foreground }
           }
 
           MouseArea {
@@ -97,12 +99,15 @@ Item {
           }
         }
 
-        // Compose Down Button
+        // Compose Down Button (with micro confirmation popup)
         Rectangle {
+          id: composeDownBtn
           width: composeDownText.implicitWidth + Style.space(12)
           height: Style.space(24)
           radius: Style.cornerRadius
-          color: downMouse.containsMouse ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.25) : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.1)
+          color: downMouse.containsMouse ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3) : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.1)
+          border.color: downMouse.containsMouse ? Color.urgent : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3)
+          border.width: 1
 
           RowLayout {
             id: composeDownText
@@ -117,18 +122,97 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: {
-              if (actionProc) {
-                actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "compose-down", root.project.path]
-                actionProc.running = true
-                Qt.callLater(root.onRefresh)
-              }
-            }
+            onClicked: composeDownPopup.open()
           }
 
           PanelToolTip {
-            visible: downMouse.containsMouse
+            visible: downMouse.containsMouse && !composeDownPopup.visible
             text: "Run docker compose down in project"
+          }
+
+          Popup {
+            id: composeDownPopup
+            x: -(implicitWidth - parent.width)
+            y: -implicitHeight - Style.space(4)
+            padding: Style.space(4)
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+
+            background: Rectangle {
+              radius: Style.cornerRadius
+              color: Color.background
+              border.color: Color.urgent
+              border.width: 1
+            }
+
+            contentItem: RowLayout {
+              spacing: Style.space(6)
+
+              Text {
+                text: "Compose Down?"
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.weight: Font.Bold
+                color: Color.urgent
+                leftPadding: Style.space(4)
+              }
+
+              Rectangle {
+                width: cdYesText.implicitWidth + Style.space(12)
+                height: Style.space(22)
+                radius: Style.cornerRadius
+                color: cdYesMouse.containsMouse ? Color.urgent : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.25)
+
+                Text {
+                  id: cdYesText
+                  anchors.centerIn: parent
+                  text: "Yes"
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.caption
+                  font.weight: Font.Bold
+                  color: cdYesMouse.containsMouse ? "#ffffff" : Color.urgent
+                }
+
+                MouseArea {
+                  id: cdYesMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    composeDownPopup.close()
+                    if (actionProc) {
+                      actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "compose-down", root.project.path]
+                      actionProc.running = true
+                      Qt.callLater(root.onRefresh)
+                    }
+                  }
+                }
+              }
+
+              Rectangle {
+                width: cdNoText.implicitWidth + Style.space(12)
+                height: Style.space(22)
+                radius: Style.cornerRadius
+                color: cdNoMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.2) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+                Text {
+                  id: cdNoText
+                  anchors.centerIn: parent
+                  text: "No"
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.caption
+                  font.weight: Font.Medium
+                  color: Color.foreground
+                }
+
+                MouseArea {
+                  id: cdNoMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: composeDownPopup.close()
+                }
+              }
+            }
           }
         }
       }
@@ -156,6 +240,50 @@ Item {
         font.pixelSize: Style.font.caption
         color: Color.urgent
       }
+
+      Rectangle {
+        visible: root.docker.available
+        width: refreshBtn.implicitWidth + Style.space(12)
+        height: Style.space(24)
+        radius: Style.cornerRadius
+        color: refreshMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.14) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.05)
+        border.color: refreshMouse.containsMouse ? Color.accent : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+        border.width: 1
+
+        RowLayout {
+          id: refreshBtn
+          anchors.centerIn: parent
+          spacing: Style.space(4)
+
+          Text {
+            text: "󰑐"
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            color: refreshMouse.containsMouse ? Color.accent : Color.foreground
+          }
+          Text {
+            text: "Refresh"
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            color: refreshMouse.containsMouse ? Color.accent : Color.foreground
+          }
+        }
+
+        MouseArea {
+          id: refreshMouse
+          anchors.fill: parent
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onClicked: {
+            if (typeof root.onRefresh === "function") root.onRefresh()
+          }
+        }
+
+        PanelToolTip {
+          visible: refreshMouse.containsMouse
+          text: "Scan Docker containers now"
+        }
+      }
     }
 
     // Main Container List / Logs view
@@ -172,18 +300,29 @@ Item {
         model: root.docker.containers || []
 
         delegate: Rectangle {
+          id: containerCard
           width: containerList.width
           height: Style.space(54)
           radius: Style.cornerRadius
-          color: cMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
-          border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
+          color: cHoverArea.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
+          border.color: cHoverArea.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
           border.width: 1
+
+          // Background row hover detector placed behind controls
+          MouseArea {
+            id: cHoverArea
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            z: 0
+          }
 
           RowLayout {
             anchors.fill: parent
             anchors.leftMargin: Style.space(10)
             anchors.rightMargin: Style.space(10)
             spacing: Style.space(8)
+            z: 1
 
             // Status Icon
             Text {
@@ -229,19 +368,23 @@ Item {
             Item { Layout.fillWidth: true }
 
             // Action Buttons
-            // Start/Stop toggle
+            // 1. Start/Stop toggle (with confirmation popup for Stop)
             Rectangle {
-              width: Style.space(26)
-              height: Style.space(26)
+              id: toggleBtn
+              width: Style.space(28)
+              height: Style.space(28)
               radius: Style.cornerRadius
-              color: toggleMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+              color: toggleMouse.containsMouse ? (modelData.state === "running" ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3) : Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.25)) : (modelData.state === "running" ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.1) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08))
+              border.color: toggleMouse.containsMouse ? (modelData.state === "running" ? Color.urgent : Color.accent) : (modelData.state === "running" ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15))
+              border.width: 1
 
               Text {
                 anchors.centerIn: parent
                 text: modelData.state === "running" ? "󰅖" : "󰐊"
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
-                color: modelData.state === "running" ? Color.urgent : "#50fa7b"
+                font.weight: Font.Bold
+                color: modelData.state === "running" ? Color.urgent : (toggleMouse.containsMouse ? Color.accent : "#50fa7b")
               }
 
               MouseArea {
@@ -250,27 +393,121 @@ Item {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                  if (actionProc) {
-                    var act = modelData.state === "running" ? "docker-stop" : "docker-start"
-                    actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), act, modelData.id]
-                    actionProc.running = true
-                    Qt.callLater(root.onRefresh)
+                  if (modelData.state === "running") {
+                    stopConfirmPopup.open()
+                  } else {
+                    if (actionProc) {
+                      actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "docker-start", modelData.id]
+                      actionProc.running = true
+                      Qt.callLater(root.onRefresh)
+                    }
                   }
                 }
               }
 
               PanelToolTip {
-                visible: toggleMouse.containsMouse
+                visible: toggleMouse.containsMouse && !stopConfirmPopup.visible
                 text: modelData.state === "running" ? "Stop " + modelData.name : "Start " + modelData.name
+              }
+
+              // Stop micro confirmation popup
+              Popup {
+                id: stopConfirmPopup
+                x: -(implicitWidth - parent.width)
+                y: -implicitHeight - Style.space(4)
+                padding: Style.space(4)
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+
+                background: Rectangle {
+                  radius: Style.cornerRadius
+                  color: Color.background
+                  border.color: Color.urgent
+                  border.width: 1
+                }
+
+                contentItem: RowLayout {
+                  spacing: Style.space(6)
+
+                  Text {
+                    text: "Stop " + modelData.name + "?"
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    font.weight: Font.Bold
+                    color: Color.urgent
+                    leftPadding: Style.space(4)
+                  }
+
+                  // Yes Button
+                  Rectangle {
+                    width: stopYesText.implicitWidth + Style.space(12)
+                    height: Style.space(22)
+                    radius: Style.cornerRadius
+                    color: stopYesMouse.containsMouse ? Color.urgent : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.25)
+
+                    Text {
+                      id: stopYesText
+                      anchors.centerIn: parent
+                      text: "Yes"
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.caption
+                      font.weight: Font.Bold
+                      color: stopYesMouse.containsMouse ? "#ffffff" : Color.urgent
+                    }
+
+                    MouseArea {
+                      id: stopYesMouse
+                      anchors.fill: parent
+                      hoverEnabled: true
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: {
+                        stopConfirmPopup.close()
+                        if (actionProc) {
+                          actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "docker-stop", modelData.id]
+                          actionProc.running = true
+                          Qt.callLater(root.onRefresh)
+                        }
+                      }
+                    }
+                  }
+
+                  // No Button
+                  Rectangle {
+                    width: stopNoText.implicitWidth + Style.space(12)
+                    height: Style.space(22)
+                    radius: Style.cornerRadius
+                    color: stopNoMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.2) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+                    Text {
+                      id: stopNoText
+                      anchors.centerIn: parent
+                      text: "No"
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.caption
+                      font.weight: Font.Medium
+                      color: Color.foreground
+                    }
+
+                    MouseArea {
+                      id: stopNoMouse
+                      anchors.fill: parent
+                      hoverEnabled: true
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: stopConfirmPopup.close()
+                    }
+                  }
+                }
               }
             }
 
-            // Restart Button
+            // 2. Restart Button (with confirmation popup)
             Rectangle {
-              width: Style.space(26)
-              height: Style.space(26)
+              id: restBtn
+              width: Style.space(28)
+              height: Style.space(28)
               radius: Style.cornerRadius
-              color: restMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+              color: restMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.2) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+              border.color: restMouse.containsMouse ? Color.foreground : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+              border.width: 1
 
               Text {
                 anchors.centerIn: parent
@@ -285,34 +522,119 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                  if (actionProc) {
-                    actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "docker-restart", modelData.id]
-                    actionProc.running = true
-                    Qt.callLater(root.onRefresh)
-                  }
-                }
+                onClicked: restartConfirmPopup.open()
               }
 
               PanelToolTip {
-                visible: restMouse.containsMouse
+                visible: restMouse.containsMouse && !restartConfirmPopup.visible
                 text: "Restart " + modelData.name
+              }
+
+              // Restart micro confirmation popup
+              Popup {
+                id: restartConfirmPopup
+                x: -(implicitWidth - parent.width)
+                y: -implicitHeight - Style.space(4)
+                padding: Style.space(4)
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+
+                background: Rectangle {
+                  radius: Style.cornerRadius
+                  color: Color.background
+                  border.color: Color.accent
+                  border.width: 1
+                }
+
+                contentItem: RowLayout {
+                  spacing: Style.space(6)
+
+                  Text {
+                    text: "Restart " + modelData.name + "?"
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    font.weight: Font.Bold
+                    color: Color.accent
+                    leftPadding: Style.space(4)
+                  }
+
+                  // Yes Button
+                  Rectangle {
+                    width: restYesText.implicitWidth + Style.space(12)
+                    height: Style.space(22)
+                    radius: Style.cornerRadius
+                    color: restYesMouse.containsMouse ? Color.accent : Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.25)
+
+                    Text {
+                      id: restYesText
+                      anchors.centerIn: parent
+                      text: "Yes"
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.caption
+                      font.weight: Font.Bold
+                      color: restYesMouse.containsMouse ? "#ffffff" : Color.accent
+                    }
+
+                    MouseArea {
+                      id: restYesMouse
+                      anchors.fill: parent
+                      hoverEnabled: true
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: {
+                        restartConfirmPopup.close()
+                        if (actionProc) {
+                          actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "docker-restart", modelData.id]
+                          actionProc.running = true
+                          Qt.callLater(root.onRefresh)
+                        }
+                      }
+                    }
+                  }
+
+                  // No Button
+                  Rectangle {
+                    width: restNoText.implicitWidth + Style.space(12)
+                    height: Style.space(22)
+                    radius: Style.cornerRadius
+                    color: restNoMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.2) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+                    Text {
+                      id: restNoText
+                      anchors.centerIn: parent
+                      text: "No"
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.caption
+                      font.weight: Font.Medium
+                      color: Color.foreground
+                    }
+
+                    MouseArea {
+                      id: restNoMouse
+                      anchors.fill: parent
+                      hoverEnabled: true
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: restartConfirmPopup.close()
+                    }
+                  }
+                }
               }
             }
 
-            // View Logs Button
+            // 3. View Logs Button
             Rectangle {
-              width: Style.space(26)
-              height: Style.space(26)
+              id: logBtn
+              width: Style.space(28)
+              height: Style.space(28)
               radius: Style.cornerRadius
-              color: logMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+              color: logMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.25) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+              border.color: logMouse.containsMouse ? Color.accent : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+              border.width: 1
 
               Text {
                 anchors.centerIn: parent
                 text: "󰈙"
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
-                color: Color.foreground
+                color: logMouse.containsMouse ? Color.accent : Color.foreground
               }
 
               MouseArea {
@@ -330,16 +652,9 @@ Item {
 
               PanelToolTip {
                 visible: logMouse.containsMouse
-                text: "View logs for " + modelData.name
+                text: "View live logs for " + modelData.name
               }
             }
-          }
-
-          MouseArea {
-            id: cMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
           }
         }
 
@@ -378,17 +693,50 @@ Item {
               color: Color.accent
             }
             Item { Layout.fillWidth: true }
+
+            // Copy logs button
             Rectangle {
-              width: Style.space(22)
-              height: Style.space(22)
+              width: Style.space(24)
+              height: Style.space(24)
               radius: Style.cornerRadius
-              color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
-              Text { anchors.centerIn: parent; text: "󰅖"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.foreground }
+              color: copyLogMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+              border.color: copyLogMouse.containsMouse ? Color.accent : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+              border.width: 1
+
+              Text { anchors.centerIn: parent; text: "󰆏"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.foreground }
               MouseArea {
+                id: copyLogMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Quickshell.clipboardText = root.logOutputText
+              }
+              PanelToolTip {
+                visible: copyLogMouse.containsMouse
+                text: "Copy logs to clipboard"
+              }
+            }
+
+            // Close logs button
+            Rectangle {
+              width: Style.space(24)
+              height: Style.space(24)
+              radius: Style.cornerRadius
+              color: closeLogMouse.containsMouse ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
+              border.color: closeLogMouse.containsMouse ? Color.urgent : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+              border.width: 1
+
+              Text { anchors.centerIn: parent; text: "󰅖"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: closeLogMouse.containsMouse ? Color.urgent : Color.foreground }
+              MouseArea {
+                id: closeLogMouse
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.showingLogs = false
+              }
+              PanelToolTip {
+                visible: closeLogMouse.containsMouse
+                text: "Close logs view"
               }
             }
           }

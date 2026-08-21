@@ -103,7 +103,7 @@ Item {
             spacing: Style.space(6)
 
             Text {
-              text: modelData.type === "project" ? "󰉋" : "󱥸"
+              text: modelData.type === "project" ? "󰉋" : ""
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               font.weight: Font.Bold
@@ -258,7 +258,7 @@ Item {
 
                   Text {
                     anchors.centerIn: parent
-                    text: "󰐊"
+                    text: ""
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
                     color: openMouse.containsMouse ? Color.accent : Color.foreground
