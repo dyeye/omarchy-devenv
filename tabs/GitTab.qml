@@ -680,7 +680,7 @@ Item {
       Layout.fillWidth: true
       Layout.fillHeight: true
 
-      // 3A. Commits View
+      // 3A. Commits View (with marquee on commit message)
       ListView {
         id: commitsList
         anchors.fill: parent
@@ -690,18 +690,29 @@ Item {
         model: root.git.commits || []
 
         delegate: Rectangle {
+          id: commitRow
           width: commitsList.width
-          height: Style.space(44)
+          height: Style.space(46)
           radius: Style.cornerRadius
           color: commitMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
-          border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
+          border.color: commitMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
           border.width: 1
+
+          // Background row hover
+          MouseArea {
+            id: commitMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            z: 0
+          }
 
           RowLayout {
             anchors.fill: parent
             anchors.leftMargin: Style.space(8)
             anchors.rightMargin: Style.space(8)
             spacing: Style.space(8)
+            z: 1
 
             // Commit Hash Badge (Click to copy)
             Rectangle {
@@ -742,14 +753,53 @@ Item {
               spacing: 0
               Layout.fillWidth: true
 
-              Text {
-                text: modelData.message
-                font.family: Style.font.family
-                font.pixelSize: Style.font.bodySmall
-                font.weight: Font.Medium
-                color: Color.foreground
-                elide: Text.ElideRight
+              // Marquee Commit Message
+              Item {
+                id: commitMsgMarquee
                 Layout.fillWidth: true
+                Layout.preferredHeight: Style.space(16)
+                clip: true
+
+                readonly property bool needsMarquee: cMsgText.implicitWidth > commitMsgMarquee.width
+
+                onWidthChanged: {
+                  cMsgText.x = 0
+                  if (cMsgAnim.running) cMsgAnim.restart()
+                }
+
+                Text {
+                  id: cMsgText
+                  text: modelData.message
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.bodySmall
+                  font.weight: Font.Medium
+                  color: Color.foreground
+                  y: 0
+                }
+
+                SequentialAnimation {
+                  id: cMsgAnim
+                  running: commitMsgMarquee.needsMarquee
+                  loops: Animation.Infinite
+
+                  PauseAnimation { duration: 1800 }
+                  NumberAnimation {
+                    target: cMsgText
+                    property: "x"
+                    from: 0
+                    to: -(cMsgText.implicitWidth - commitMsgMarquee.width + Style.space(8))
+                    duration: Math.max(1500, (cMsgText.implicitWidth - commitMsgMarquee.width) * 30)
+                    easing.type: Easing.Linear
+                  }
+                  PauseAnimation { duration: 1800 }
+                  NumberAnimation {
+                    target: cMsgText
+                    property: "x"
+                    to: 0
+                    duration: 500
+                    easing.type: Easing.InOutQuad
+                  }
+                }
               }
 
               Text {
@@ -763,11 +813,9 @@ Item {
             }
           }
 
-          MouseArea {
-            id: commitMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            acceptedButtons: Qt.NoButton
+          PanelToolTip {
+            visible: commitMouse.containsMouse && !hashMouse.containsMouse
+            text: modelData.message + "\n" + modelData.author + " (" + modelData.date + ")"
           }
         }
 
@@ -782,7 +830,7 @@ Item {
         }
       }
 
-      // 3B. Pull Requests View
+      // 3B. Pull Requests View (with marquee on PR title)
       ListView {
         id: prList
         anchors.fill: parent
@@ -792,18 +840,28 @@ Item {
         model: root.git.pullRequests || []
 
         delegate: Rectangle {
+          id: prRow
           width: prList.width
           height: Style.space(48)
           radius: Style.cornerRadius
           color: prRowMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
-          border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
+          border.color: prRowMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
           border.width: 1
+
+          MouseArea {
+            id: prRowMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            z: 0
+          }
 
           RowLayout {
             anchors.fill: parent
             anchors.leftMargin: Style.space(10)
             anchors.rightMargin: Style.space(10)
             spacing: Style.space(8)
+            z: 1
 
             Text {
               text: ""
@@ -816,14 +874,54 @@ Item {
               spacing: 0
               Layout.fillWidth: true
 
-              Text {
-                text: "#" + modelData.number + " " + modelData.title
-                font.family: Style.font.family
-                font.pixelSize: Style.font.bodySmall
-                font.weight: Font.Medium
-                color: Color.foreground
-                elide: Text.ElideRight
+              // Marquee PR Title
+              Item {
+                id: prTitleMarquee
                 Layout.fillWidth: true
+                Layout.preferredHeight: Style.space(18)
+                clip: true
+
+                readonly property string fullPrTitle: "#" + modelData.number + " " + modelData.title
+                readonly property bool needsMarquee: prTitleText.implicitWidth > prTitleMarquee.width
+
+                onWidthChanged: {
+                  prTitleText.x = 0
+                  if (prTitleAnim.running) prTitleAnim.restart()
+                }
+
+                Text {
+                  id: prTitleText
+                  text: prTitleMarquee.fullPrTitle
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.bodySmall
+                  font.weight: Font.Medium
+                  color: Color.foreground
+                  y: 0
+                }
+
+                SequentialAnimation {
+                  id: prTitleAnim
+                  running: prTitleMarquee.needsMarquee
+                  loops: Animation.Infinite
+
+                  PauseAnimation { duration: 1800 }
+                  NumberAnimation {
+                    target: prTitleText
+                    property: "x"
+                    from: 0
+                    to: -(prTitleText.implicitWidth - prTitleMarquee.width + Style.space(8))
+                    duration: Math.max(1500, (prTitleText.implicitWidth - prTitleMarquee.width) * 30)
+                    easing.type: Easing.Linear
+                  }
+                  PauseAnimation { duration: 1800 }
+                  NumberAnimation {
+                    target: prTitleText
+                    property: "x"
+                    to: 0
+                    duration: 500
+                    easing.type: Easing.InOutQuad
+                  }
+                }
               }
 
               Text {
@@ -873,7 +971,10 @@ Item {
             }
           }
 
-          MouseArea { id: prRowMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+          PanelToolTip {
+            visible: prRowMouse.containsMouse && !openPrMouse.containsMouse
+            text: "#" + modelData.number + " " + modelData.title + "\nby " + modelData.author
+          }
         }
 
         // Empty PRs state
@@ -926,7 +1027,7 @@ Item {
         }
       }
 
-      // 3C. Issues View
+      // 3C. Issues View (with marquee on Issue title)
       ListView {
         id: issuesList
         anchors.fill: parent
@@ -936,18 +1037,28 @@ Item {
         model: root.git.issues || []
 
         delegate: Rectangle {
+          id: issRow
           width: issuesList.width
-          height: Style.space(44)
+          height: Style.space(46)
           radius: Style.cornerRadius
           color: issRowMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
-          border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
+          border.color: issRowMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
           border.width: 1
+
+          MouseArea {
+            id: issRowMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            z: 0
+          }
 
           RowLayout {
             anchors.fill: parent
             anchors.leftMargin: Style.space(10)
             anchors.rightMargin: Style.space(10)
             spacing: Style.space(8)
+            z: 1
 
             Text {
               text: ""
@@ -960,14 +1071,54 @@ Item {
               spacing: 0
               Layout.fillWidth: true
 
-              Text {
-                text: "#" + modelData.number + " " + modelData.title
-                font.family: Style.font.family
-                font.pixelSize: Style.font.bodySmall
-                font.weight: Font.Medium
-                color: Color.foreground
-                elide: Text.ElideRight
+              // Marquee Issue Title
+              Item {
+                id: issTitleMarquee
                 Layout.fillWidth: true
+                Layout.preferredHeight: Style.space(18)
+                clip: true
+
+                readonly property string fullIssTitle: "#" + modelData.number + " " + modelData.title
+                readonly property bool needsMarquee: issTitleText.implicitWidth > issTitleMarquee.width
+
+                onWidthChanged: {
+                  issTitleText.x = 0
+                  if (issTitleAnim.running) issTitleAnim.restart()
+                }
+
+                Text {
+                  id: issTitleText
+                  text: issTitleMarquee.fullIssTitle
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.bodySmall
+                  font.weight: Font.Medium
+                  color: Color.foreground
+                  y: 0
+                }
+
+                SequentialAnimation {
+                  id: issTitleAnim
+                  running: issTitleMarquee.needsMarquee
+                  loops: Animation.Infinite
+
+                  PauseAnimation { duration: 1800 }
+                  NumberAnimation {
+                    target: issTitleText
+                    property: "x"
+                    from: 0
+                    to: -(issTitleText.implicitWidth - issTitleMarquee.width + Style.space(8))
+                    duration: Math.max(1500, (issTitleText.implicitWidth - issTitleMarquee.width) * 30)
+                    easing.type: Easing.Linear
+                  }
+                  PauseAnimation { duration: 1800 }
+                  NumberAnimation {
+                    target: issTitleText
+                    property: "x"
+                    to: 0
+                    duration: 500
+                    easing.type: Easing.InOutQuad
+                  }
+                }
               }
 
               Text {
@@ -1017,7 +1168,10 @@ Item {
             }
           }
 
-          MouseArea { id: issRowMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+          PanelToolTip {
+            visible: issRowMouse.containsMouse && !openIssMouse.containsMouse
+            text: "#" + modelData.number + " " + modelData.title + "\nopened by " + modelData.author
+          }
         }
 
         // Empty Issues state
@@ -1070,7 +1224,7 @@ Item {
         }
       }
 
-      // 3D. Stashes View
+      // 3D. Stashes View (with marquee on Stash message)
       ListView {
         id: stashList
         anchors.fill: parent
@@ -1080,18 +1234,28 @@ Item {
         model: root.git.stashes || []
 
         delegate: Rectangle {
+          id: stashRow
           width: stashList.width
-          height: Style.space(44)
+          height: Style.space(46)
           radius: Style.cornerRadius
           color: stashRowMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
-          border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
+          border.color: stashRowMouse.containsMouse ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
           border.width: 1
+
+          MouseArea {
+            id: stashRowMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            z: 0
+          }
 
           RowLayout {
             anchors.fill: parent
             anchors.leftMargin: Style.space(10)
             anchors.rightMargin: Style.space(10)
             spacing: Style.space(8)
+            z: 1
 
             Text {
               text: "󰅖"
@@ -1104,14 +1268,54 @@ Item {
               spacing: 0
               Layout.fillWidth: true
 
-              Text {
-                text: "stash@{" + modelData.index + "}: " + modelData.message
-                font.family: Style.font.family
-                font.pixelSize: Style.font.bodySmall
-                font.weight: Font.Medium
-                color: Color.foreground
-                elide: Text.ElideRight
+              // Marquee Stash Message
+              Item {
+                id: stashMsgMarquee
                 Layout.fillWidth: true
+                Layout.preferredHeight: Style.space(18)
+                clip: true
+
+                readonly property string fullStashMsg: "stash@{" + modelData.index + "}: " + modelData.message
+                readonly property bool needsMarquee: stashMsgText.implicitWidth > stashMsgMarquee.width
+
+                onWidthChanged: {
+                  stashMsgText.x = 0
+                  if (stashMsgAnim.running) stashMsgAnim.restart()
+                }
+
+                Text {
+                  id: stashMsgText
+                  text: stashMsgMarquee.fullStashMsg
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.bodySmall
+                  font.weight: Font.Medium
+                  color: Color.foreground
+                  y: 0
+                }
+
+                SequentialAnimation {
+                  id: stashMsgAnim
+                  running: stashMsgMarquee.needsMarquee
+                  loops: Animation.Infinite
+
+                  PauseAnimation { duration: 1800 }
+                  NumberAnimation {
+                    target: stashMsgText
+                    property: "x"
+                    from: 0
+                    to: -(stashMsgText.implicitWidth - stashMsgMarquee.width + Style.space(8))
+                    duration: Math.max(1500, (stashMsgText.implicitWidth - stashMsgMarquee.width) * 30)
+                    easing.type: Easing.Linear
+                  }
+                  PauseAnimation { duration: 1800 }
+                  NumberAnimation {
+                    target: stashMsgText
+                    property: "x"
+                    to: 0
+                    duration: 500
+                    easing.type: Easing.InOutQuad
+                  }
+                }
               }
 
               Text {
@@ -1164,7 +1368,10 @@ Item {
             }
           }
 
-          MouseArea { id: stashRowMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+          PanelToolTip {
+            visible: stashRowMouse.containsMouse && !popMouse.containsMouse
+            text: "stash@{" + modelData.index + "}: " + modelData.message + "\n" + modelData.date
+          }
         }
 
         // Empty Stashes state
