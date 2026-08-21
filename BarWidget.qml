@@ -69,7 +69,7 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "󱁐"
+    text: root.opened ? "" : ""
     tooltipText: "DevEnv (" + root.projectName + ")"
 
     onPressed: function(b) {
