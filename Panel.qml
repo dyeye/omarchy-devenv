@@ -138,18 +138,18 @@ Panel {
                 spacing: 0
                 Layout.preferredWidth: Style.space(210)
 
-                // Marquee Title Container
+                // Marquee Title Container (Static elide, Marquee on Hover)
                 Item {
                   id: titleMarqueeBox
                   Layout.preferredWidth: Style.space(210)
                   Layout.preferredHeight: Style.space(18)
                   clip: true
 
-                  readonly property bool needsMarquee: titleText.implicitWidth > titleMarqueeBox.width
+                  readonly property bool isHovered: titleHover.containsMouse
+                  readonly property bool isOverflowing: titleText.implicitWidth > titleMarqueeBox.width
 
-                  onNeedsMarqueeChanged: {
-                    titleText.x = 0
-                    if (titleMarqueeAnim.running) titleMarqueeAnim.restart()
+                  onIsHoveredChanged: {
+                    if (!isHovered) titleText.x = 0
                   }
 
                   Text {
@@ -160,28 +160,30 @@ Panel {
                     font.weight: Font.Bold
                     color: Color.foreground
                     y: 0
+                    width: titleMarqueeBox.isHovered ? implicitWidth : titleMarqueeBox.width
+                    elide: titleMarqueeBox.isHovered ? Text.ElideNone : Text.ElideRight
                   }
 
                   SequentialAnimation {
                     id: titleMarqueeAnim
-                    running: root.opened && titleMarqueeBox.needsMarquee
+                    running: root.opened && titleMarqueeBox.isHovered && titleMarqueeBox.isOverflowing
                     loops: Animation.Infinite
 
-                    PauseAnimation { duration: 1800 }
+                    PauseAnimation { duration: 600 }
                     NumberAnimation {
                       target: titleText
                       property: "x"
                       from: 0
-                      to: -(titleText.implicitWidth - titleMarqueeBox.width + Style.space(12))
-                      duration: Math.max(1500, (titleText.implicitWidth - titleMarqueeBox.width) * 35)
+                      to: -(titleText.implicitWidth - titleMarqueeBox.width + Style.space(10))
+                      duration: Math.max(1200, (titleText.implicitWidth - titleMarqueeBox.width) * 30)
                       easing.type: Easing.Linear
                     }
-                    PauseAnimation { duration: 1800 }
+                    PauseAnimation { duration: 1000 }
                     NumberAnimation {
                       target: titleText
                       property: "x"
                       to: 0
-                      duration: 500
+                      duration: 400
                       easing.type: Easing.InOutQuad
                     }
                   }
@@ -199,7 +201,7 @@ Panel {
                   }
                 }
 
-                // Marquee Path Container
+                // Marquee Path Container (Static elide, Marquee on Hover)
                 Item {
                   id: marqueeBox
                   Layout.preferredWidth: Style.space(210)
@@ -207,11 +209,11 @@ Panel {
                   clip: true
 
                   readonly property string shortPath: Model.shortenPath(root.project.path)
-                  readonly property bool needsMarquee: pathText.implicitWidth > marqueeBox.width
+                  readonly property bool isHovered: pathHover.containsMouse
+                  readonly property bool isOverflowing: pathText.implicitWidth > marqueeBox.width
 
-                  onShortPathChanged: {
-                    pathText.x = 0
-                    if (marqueeAnim.running) marqueeAnim.restart()
+                  onIsHoveredChanged: {
+                    if (!isHovered) pathText.x = 0
                   }
 
                   Text {
@@ -221,28 +223,30 @@ Panel {
                     font.pixelSize: Style.font.caption
                     color: Color.muted
                     y: 0
+                    width: marqueeBox.isHovered ? implicitWidth : marqueeBox.width
+                    elide: marqueeBox.isHovered ? Text.ElideNone : Text.ElideRight
                   }
 
                   SequentialAnimation {
                     id: marqueeAnim
-                    running: root.opened && marqueeBox.needsMarquee
+                    running: root.opened && marqueeBox.isHovered && marqueeBox.isOverflowing
                     loops: Animation.Infinite
 
-                    PauseAnimation { duration: 1800 }
+                    PauseAnimation { duration: 600 }
                     NumberAnimation {
                       target: pathText
                       property: "x"
                       from: 0
-                      to: -(pathText.implicitWidth - marqueeBox.width + Style.space(12))
-                      duration: Math.max(2000, (pathText.implicitWidth - marqueeBox.width) * 35)
+                      to: -(pathText.implicitWidth - marqueeBox.width + Style.space(10))
+                      duration: Math.max(1200, (pathText.implicitWidth - marqueeBox.width) * 30)
                       easing.type: Easing.Linear
                     }
-                    PauseAnimation { duration: 1800 }
+                    PauseAnimation { duration: 1000 }
                     NumberAnimation {
                       target: pathText
                       property: "x"
                       to: 0
-                      duration: 600
+                      duration: 400
                       easing.type: Easing.InOutQuad
                     }
                   }

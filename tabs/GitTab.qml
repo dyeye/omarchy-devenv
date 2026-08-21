@@ -72,7 +72,7 @@ Item {
             Layout.fillWidth: true
             Layout.maximumWidth: Style.space(210)
 
-            // Marquee Repo Name
+            // Marquee Repo Name (Static with '...', Marquee on Hover)
             Item {
               id: gitRepoNameMarqueeBox
               Layout.fillWidth: true
@@ -80,11 +80,11 @@ Item {
               clip: true
 
               readonly property string repoTitle: root.git.hasRepo ? (root.git.repoName !== "" ? root.git.repoName : root.project.name) : "No Git Repository"
-              readonly property bool needsMarquee: gitRepoNameText.implicitWidth > gitRepoNameMarqueeBox.width
+              readonly property bool isHovered: gitRepoNameHover.containsMouse
+              readonly property bool isOverflowing: gitRepoNameText.implicitWidth > gitRepoNameMarqueeBox.width
 
-              onRepoTitleChanged: {
-                gitRepoNameText.x = 0
-                if (gitRepoNameAnim.running) gitRepoNameAnim.restart()
+              onIsHoveredChanged: {
+                if (!isHovered) gitRepoNameText.x = 0
               }
 
               Text {
@@ -95,28 +95,30 @@ Item {
                 font.weight: Font.Bold
                 color: Color.foreground
                 y: 0
+                width: gitRepoNameMarqueeBox.isHovered ? implicitWidth : gitRepoNameMarqueeBox.width
+                elide: gitRepoNameMarqueeBox.isHovered ? Text.ElideNone : Text.ElideRight
               }
 
               SequentialAnimation {
                 id: gitRepoNameAnim
-                running: gitRepoNameMarqueeBox.needsMarquee
+                running: gitRepoNameMarqueeBox.isHovered && gitRepoNameMarqueeBox.isOverflowing
                 loops: Animation.Infinite
 
-                PauseAnimation { duration: 1800 }
+                PauseAnimation { duration: 600 }
                 NumberAnimation {
                   target: gitRepoNameText
                   property: "x"
                   from: 0
                   to: -(gitRepoNameText.implicitWidth - gitRepoNameMarqueeBox.width + Style.space(8))
-                  duration: Math.max(1500, (gitRepoNameText.implicitWidth - gitRepoNameMarqueeBox.width) * 35)
+                  duration: Math.max(1200, (gitRepoNameText.implicitWidth - gitRepoNameMarqueeBox.width) * 30)
                   easing.type: Easing.Linear
                 }
-                PauseAnimation { duration: 1800 }
+                PauseAnimation { duration: 1000 }
                 NumberAnimation {
                   target: gitRepoNameText
                   property: "x"
                   to: 0
-                  duration: 500
+                  duration: 400
                   easing.type: Easing.InOutQuad
                 }
               }
@@ -134,7 +136,7 @@ Item {
               }
             }
 
-            // Marquee Repo Path
+            // Marquee Repo Path (Static with '...', Marquee on Hover)
             Item {
               id: gitMarqueeBox
               Layout.fillWidth: true
@@ -143,11 +145,11 @@ Item {
 
               readonly property string rawPath: root.git.hasRepo ? root.git.repoPath : root.project.path
               readonly property string shortPath: Model.shortenPath(rawPath)
-              readonly property bool needsMarquee: gitPathText.implicitWidth > gitMarqueeBox.width
+              readonly property bool isHovered: gitPathHover.containsMouse
+              readonly property bool isOverflowing: gitPathText.implicitWidth > gitMarqueeBox.width
 
-              onRawPathChanged: {
-                gitPathText.x = 0
-                if (gitMarqueeAnim.running) gitMarqueeAnim.restart()
+              onIsHoveredChanged: {
+                if (!isHovered) gitPathText.x = 0
               }
 
               Text {
@@ -157,28 +159,30 @@ Item {
                 font.pixelSize: Style.font.caption
                 color: Color.muted
                 y: 0
+                width: gitMarqueeBox.isHovered ? implicitWidth : gitMarqueeBox.width
+                elide: gitMarqueeBox.isHovered ? Text.ElideNone : Text.ElideRight
               }
 
               SequentialAnimation {
                 id: gitMarqueeAnim
-                running: gitMarqueeBox.needsMarquee
+                running: gitMarqueeBox.isHovered && gitMarqueeBox.isOverflowing
                 loops: Animation.Infinite
 
-                PauseAnimation { duration: 1800 }
+                PauseAnimation { duration: 600 }
                 NumberAnimation {
                   target: gitPathText
                   property: "x"
                   from: 0
                   to: -(gitPathText.implicitWidth - gitMarqueeBox.width + Style.space(10))
-                  duration: Math.max(2000, (gitPathText.implicitWidth - gitMarqueeBox.width) * 35)
+                  duration: Math.max(1200, (gitPathText.implicitWidth - gitMarqueeBox.width) * 30)
                   easing.type: Easing.Linear
                 }
-                PauseAnimation { duration: 1800 }
+                PauseAnimation { duration: 1000 }
                 NumberAnimation {
                   target: gitPathText
                   property: "x"
                   to: 0
-                  duration: 600
+                  duration: 400
                   easing.type: Easing.InOutQuad
                 }
               }
@@ -680,7 +684,7 @@ Item {
       Layout.fillWidth: true
       Layout.fillHeight: true
 
-      // 3A. Commits View (with marquee on commit message)
+      // 3A. Commits View (Static elide with '...', Marquee on Hover)
       ListView {
         id: commitsList
         anchors.fill: parent
@@ -753,18 +757,18 @@ Item {
               spacing: 0
               Layout.fillWidth: true
 
-              // Marquee Commit Message
+              // Marquee Commit Message (Static elide with '...', Marquee on Hover)
               Item {
                 id: commitMsgMarquee
                 Layout.fillWidth: true
                 Layout.preferredHeight: Style.space(16)
                 clip: true
 
-                readonly property bool needsMarquee: cMsgText.implicitWidth > commitMsgMarquee.width
+                readonly property bool isHovered: commitMouse.containsMouse
+                readonly property bool isOverflowing: cMsgText.implicitWidth > commitMsgMarquee.width
 
-                onWidthChanged: {
-                  cMsgText.x = 0
-                  if (cMsgAnim.running) cMsgAnim.restart()
+                onIsHoveredChanged: {
+                  if (!isHovered) cMsgText.x = 0
                 }
 
                 Text {
@@ -775,28 +779,30 @@ Item {
                   font.weight: Font.Medium
                   color: Color.foreground
                   y: 0
+                  width: commitMsgMarquee.isHovered ? implicitWidth : commitMsgMarquee.width
+                  elide: commitMsgMarquee.isHovered ? Text.ElideNone : Text.ElideRight
                 }
 
                 SequentialAnimation {
                   id: cMsgAnim
-                  running: commitMsgMarquee.needsMarquee
+                  running: commitMsgMarquee.isHovered && commitMsgMarquee.isOverflowing
                   loops: Animation.Infinite
 
-                  PauseAnimation { duration: 1800 }
+                  PauseAnimation { duration: 600 }
                   NumberAnimation {
                     target: cMsgText
                     property: "x"
                     from: 0
                     to: -(cMsgText.implicitWidth - commitMsgMarquee.width + Style.space(8))
-                    duration: Math.max(1500, (cMsgText.implicitWidth - commitMsgMarquee.width) * 30)
+                    duration: Math.max(1200, (cMsgText.implicitWidth - commitMsgMarquee.width) * 30)
                     easing.type: Easing.Linear
                   }
-                  PauseAnimation { duration: 1800 }
+                  PauseAnimation { duration: 1000 }
                   NumberAnimation {
                     target: cMsgText
                     property: "x"
                     to: 0
-                    duration: 500
+                    duration: 400
                     easing.type: Easing.InOutQuad
                   }
                 }
@@ -830,7 +836,7 @@ Item {
         }
       }
 
-      // 3B. Pull Requests View (with marquee on PR title)
+      // 3B. Pull Requests View (Static elide with '...', Marquee on Hover)
       ListView {
         id: prList
         anchors.fill: parent
@@ -874,7 +880,7 @@ Item {
               spacing: 0
               Layout.fillWidth: true
 
-              // Marquee PR Title
+              // Marquee PR Title (Static elide with '...', Marquee on Hover)
               Item {
                 id: prTitleMarquee
                 Layout.fillWidth: true
@@ -882,11 +888,11 @@ Item {
                 clip: true
 
                 readonly property string fullPrTitle: "#" + modelData.number + " " + modelData.title
-                readonly property bool needsMarquee: prTitleText.implicitWidth > prTitleMarquee.width
+                readonly property bool isHovered: prRowMouse.containsMouse
+                readonly property bool isOverflowing: prTitleText.implicitWidth > prTitleMarquee.width
 
-                onWidthChanged: {
-                  prTitleText.x = 0
-                  if (prTitleAnim.running) prTitleAnim.restart()
+                onIsHoveredChanged: {
+                  if (!isHovered) prTitleText.x = 0
                 }
 
                 Text {
@@ -897,28 +903,30 @@ Item {
                   font.weight: Font.Medium
                   color: Color.foreground
                   y: 0
+                  width: prTitleMarquee.isHovered ? implicitWidth : prTitleMarquee.width
+                  elide: prTitleMarquee.isHovered ? Text.ElideNone : Text.ElideRight
                 }
 
                 SequentialAnimation {
                   id: prTitleAnim
-                  running: prTitleMarquee.needsMarquee
+                  running: prTitleMarquee.isHovered && prTitleMarquee.isOverflowing
                   loops: Animation.Infinite
 
-                  PauseAnimation { duration: 1800 }
+                  PauseAnimation { duration: 600 }
                   NumberAnimation {
                     target: prTitleText
                     property: "x"
                     from: 0
                     to: -(prTitleText.implicitWidth - prTitleMarquee.width + Style.space(8))
-                    duration: Math.max(1500, (prTitleText.implicitWidth - prTitleMarquee.width) * 30)
+                    duration: Math.max(1200, (prTitleText.implicitWidth - prTitleMarquee.width) * 30)
                     easing.type: Easing.Linear
                   }
-                  PauseAnimation { duration: 1800 }
+                  PauseAnimation { duration: 1000 }
                   NumberAnimation {
                     target: prTitleText
                     property: "x"
                     to: 0
-                    duration: 500
+                    duration: 400
                     easing.type: Easing.InOutQuad
                   }
                 }
@@ -1027,7 +1035,7 @@ Item {
         }
       }
 
-      // 3C. Issues View (with marquee on Issue title)
+      // 3C. Issues View (Static elide with '...', Marquee on Hover)
       ListView {
         id: issuesList
         anchors.fill: parent
@@ -1071,7 +1079,7 @@ Item {
               spacing: 0
               Layout.fillWidth: true
 
-              // Marquee Issue Title
+              // Marquee Issue Title (Static elide with '...', Marquee on Hover)
               Item {
                 id: issTitleMarquee
                 Layout.fillWidth: true
@@ -1079,11 +1087,11 @@ Item {
                 clip: true
 
                 readonly property string fullIssTitle: "#" + modelData.number + " " + modelData.title
-                readonly property bool needsMarquee: issTitleText.implicitWidth > issTitleMarquee.width
+                readonly property bool isHovered: issRowMouse.containsMouse
+                readonly property bool isOverflowing: issTitleText.implicitWidth > issTitleMarquee.width
 
-                onWidthChanged: {
-                  issTitleText.x = 0
-                  if (issTitleAnim.running) issTitleAnim.restart()
+                onIsHoveredChanged: {
+                  if (!isHovered) issTitleText.x = 0
                 }
 
                 Text {
@@ -1094,28 +1102,30 @@ Item {
                   font.weight: Font.Medium
                   color: Color.foreground
                   y: 0
+                  width: issTitleMarquee.isHovered ? implicitWidth : issTitleMarquee.width
+                  elide: issTitleMarquee.isHovered ? Text.ElideNone : Text.ElideRight
                 }
 
                 SequentialAnimation {
                   id: issTitleAnim
-                  running: issTitleMarquee.needsMarquee
+                  running: issTitleMarquee.isHovered && issTitleMarquee.isOverflowing
                   loops: Animation.Infinite
 
-                  PauseAnimation { duration: 1800 }
+                  PauseAnimation { duration: 600 }
                   NumberAnimation {
                     target: issTitleText
                     property: "x"
                     from: 0
                     to: -(issTitleText.implicitWidth - issTitleMarquee.width + Style.space(8))
-                    duration: Math.max(1500, (issTitleText.implicitWidth - issTitleMarquee.width) * 30)
+                    duration: Math.max(1200, (issTitleText.implicitWidth - issTitleMarquee.width) * 30)
                     easing.type: Easing.Linear
                   }
-                  PauseAnimation { duration: 1800 }
+                  PauseAnimation { duration: 1000 }
                   NumberAnimation {
                     target: issTitleText
                     property: "x"
                     to: 0
-                    duration: 500
+                    duration: 400
                     easing.type: Easing.InOutQuad
                   }
                 }
@@ -1224,7 +1234,7 @@ Item {
         }
       }
 
-      // 3D. Stashes View (with marquee on Stash message)
+      // 3D. Stashes View (Static elide with '...', Marquee on Hover)
       ListView {
         id: stashList
         anchors.fill: parent
@@ -1268,7 +1278,7 @@ Item {
               spacing: 0
               Layout.fillWidth: true
 
-              // Marquee Stash Message
+              // Marquee Stash Message (Static elide with '...', Marquee on Hover)
               Item {
                 id: stashMsgMarquee
                 Layout.fillWidth: true
@@ -1276,11 +1286,11 @@ Item {
                 clip: true
 
                 readonly property string fullStashMsg: "stash@{" + modelData.index + "}: " + modelData.message
-                readonly property bool needsMarquee: stashMsgText.implicitWidth > stashMsgMarquee.width
+                readonly property bool isHovered: stashRowMouse.containsMouse
+                readonly property bool isOverflowing: stashMsgText.implicitWidth > stashMsgMarquee.width
 
-                onWidthChanged: {
-                  stashMsgText.x = 0
-                  if (stashMsgAnim.running) stashMsgAnim.restart()
+                onIsHoveredChanged: {
+                  if (!isHovered) stashMsgText.x = 0
                 }
 
                 Text {
@@ -1291,28 +1301,30 @@ Item {
                   font.weight: Font.Medium
                   color: Color.foreground
                   y: 0
+                  width: stashMsgMarquee.isHovered ? implicitWidth : stashMsgMarquee.width
+                  elide: stashMsgMarquee.isHovered ? Text.ElideNone : Text.ElideRight
                 }
 
                 SequentialAnimation {
                   id: stashMsgAnim
-                  running: stashMsgMarquee.needsMarquee
+                  running: stashMsgMarquee.isHovered && stashMsgMarquee.isOverflowing
                   loops: Animation.Infinite
 
-                  PauseAnimation { duration: 1800 }
+                  PauseAnimation { duration: 600 }
                   NumberAnimation {
                     target: stashMsgText
                     property: "x"
                     from: 0
                     to: -(stashMsgText.implicitWidth - stashMsgMarquee.width + Style.space(8))
-                    duration: Math.max(1500, (stashMsgText.implicitWidth - stashMsgMarquee.width) * 30)
+                    duration: Math.max(1200, (stashMsgText.implicitWidth - stashMsgMarquee.width) * 30)
                     easing.type: Easing.Linear
                   }
-                  PauseAnimation { duration: 1800 }
+                  PauseAnimation { duration: 1000 }
                   NumberAnimation {
                     target: stashMsgText
                     property: "x"
                     to: 0
-                    duration: 500
+                    duration: 400
                     easing.type: Easing.InOutQuad
                   }
                 }
