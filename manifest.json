@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "dyeye.devenv",
+  "name": "DevEnv",
+  "version": "1.0.0",
+  "author": "dyeye",
+  "license": "MIT",
+  "description": "Local development mission control: ports, Docker, Git and dev toolbox.",
+  "kinds": ["bar-widget", "panel"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "DevEnv",
+    "description": "Active project, open ports, Docker status and Git radar.",
+    "category": "Development",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "scanIntervalSec": 3
+    }
+  }
+}
