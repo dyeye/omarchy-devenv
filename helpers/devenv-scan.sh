@@ -65,7 +65,7 @@ def project_from_filepath(fpath):
         pass
     return None, None
 
-# 1. Determine active project from active window / terminal / multiplexer (herdr / tmux)
+# 1. Determine active project from active window
 active_project_path = ""
 active_project_name = ""
 
@@ -79,63 +79,15 @@ win_title = win.get("title", "")
 win_pid = win.get("pid", 0)
 win_class = win.get("class", "").lower()
 
-# Check if active window is running herdr or tmux
-is_herdr_window = "herdr" in win_class or "herdr" in win_title.lower()
-is_tmux_window = "tmux" in win_class or "tmux" in win_title.lower()
+# Check if active window is a terminal or editor
+is_terminal_window = any(t in win_class for t in ["foot", "kitty", "alacritty", "ghostty", "wezterm", "terminal", "tmux"]) or "herdr" in win_class
 
-if win_pid > 0 and not (is_herdr_window or is_tmux_window):
-    try:
-        proc_tree = subprocess.check_output(["pgrep", "-P", str(win_pid)], text=True, stderr=subprocess.DEVNULL).split()
-        for p in proc_tree:
-            try:
-                cmd = open(f"/proc/{p}/cmdline", "rb").read().decode("utf-8", errors="ignore")
-                if "herdr" in cmd: is_herdr_window = True
-                if "tmux" in cmd: is_tmux_window = True
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-# 1a. Herdr multiplexer support
-if is_herdr_window or not active_project_path:
-    try:
-        h_raw = subprocess.check_output(["herdr", "pane", "list"], text=True, stderr=subprocess.DEVNULL)
-        h_data = json.loads(h_raw)
-        panes = h_data.get("result", {}).get("panes", [])
-        for p in panes:
-            if p.get("focused") is True:
-                h_cwd = p.get("foreground_cwd") or p.get("cwd")
-                p_name, p_dir = project_from_filepath(h_cwd)
-                if p_dir:
-                    active_project_name = p_name
-                    active_project_path = p_dir
-                elif h_cwd and h_cwd != "/" and h_cwd != home:
-                    active_project_name = os.path.basename(h_cwd)
-                    active_project_path = h_cwd
-                break
-    except Exception:
-        pass
-
-# 1b. Tmux multiplexer support
-if (is_tmux_window and not active_project_path) or (not active_project_path and os.environ.get("TMUX")):
-    try:
-        t_cwd = subprocess.check_output(["tmux", "display-message", "-p", "-F", "#{pane_current_path}"], text=True, stderr=subprocess.DEVNULL).strip()
-        p_name, p_dir = project_from_filepath(t_cwd)
-        if p_dir:
-            active_project_name = p_name
-            active_project_path = p_dir
-        elif t_cwd and t_cwd != "/" and t_cwd != home:
-            active_project_name = os.path.basename(t_cwd)
-            active_project_path = t_cwd
-    except Exception:
-        pass
-
-# 1c. GUI Editors: Check window title for project patterns (e.g. Zed "dyeye.devenv — Panel.qml", VSCode "file - project - Code")
-if not active_project_path and win_title:
+# 1a. For GUI Editors & Apps: Check window title FIRST (e.g. Zed "dyeye.devenv — Panel.qml", VSCode "file - project - Code")
+if not is_terminal_window and win_title:
     title_parts = re.split(r"[\s—\-\|:]+", win_title)
     for part in title_parts:
         part = part.strip()
-        if not part or part.lower() in {"zed", "visual", "studio", "code", "obsidian", "foot", "kitty", "ghostty", "nvim", "neovim", "panel.qml"}:
+        if not part or part.lower() in {"zed", "visual", "studio", "code", "obsidian", "nvim", "neovim", "panel.qml"}:
             continue
         resolved = resolve_project_dir(part)
         if resolved:
@@ -143,21 +95,71 @@ if not active_project_path and win_title:
             active_project_name = os.path.basename(resolved)
             break
 
-# 1d. Standard terminal window (foot, kitty, alacritty, ghostty): check shell child cwd
-if not active_project_path and win_pid > 0 and any(t in win_class for t in ["foot", "kitty", "alacritty", "ghostty", "wezterm", "terminal"]):
-    try:
-        children = subprocess.check_output(["pgrep", "-P", str(win_pid)], text=True, stderr=subprocess.DEVNULL).split()
-        for cpid in reversed(children):
-            c_cwd = os.path.realpath(f"/proc/{cpid}/cwd")
-            p_name, p_dir = project_from_filepath(c_cwd)
-            if p_dir:
-                active_project_name = p_name
-                active_project_path = p_dir
-                break
-    except Exception:
-        pass
+# 1b. If active window is a terminal or multiplexer:
+if not active_project_path and is_terminal_window:
+    # Check if running herdr
+    is_herdr = "herdr" in win_class or "herdr" in win_title.lower()
+    if not is_herdr and win_pid > 0:
+        try:
+            ptree = subprocess.check_output(["pgrep", "-P", str(win_pid)], text=True, stderr=subprocess.DEVNULL).split()
+            for p in ptree:
+                cmd = open(f"/proc/{p}/cmdline", "rb").read().decode("utf-8", errors="ignore")
+                if "herdr" in cmd:
+                    is_herdr = True
+                    break
+        except Exception:
+            pass
 
-# 1e. Check open file descriptors of the active window process
+    if is_herdr:
+        try:
+            h_raw = subprocess.check_output(["herdr", "pane", "list"], text=True, stderr=subprocess.DEVNULL)
+            h_data = json.loads(h_raw)
+            panes = h_data.get("result", {}).get("panes", [])
+            for p in panes:
+                if p.get("focused") is True:
+                    h_cwd = p.get("foreground_cwd") or p.get("cwd")
+                    p_name, p_dir = project_from_filepath(h_cwd)
+                    if p_dir:
+                        active_project_name = p_name
+                        active_project_path = p_dir
+                    elif h_cwd and h_cwd != "/" and h_cwd != home:
+                        active_project_name = os.path.basename(h_cwd)
+                        active_project_path = h_cwd
+                    break
+        except Exception:
+            pass
+
+    # Check if running tmux
+    if not active_project_path:
+        is_tmux = "tmux" in win_class or "tmux" in win_title.lower() or os.environ.get("TMUX")
+        if is_tmux:
+            try:
+                t_cwd = subprocess.check_output(["tmux", "display-message", "-p", "-F", "#{pane_current_path}"], text=True, stderr=subprocess.DEVNULL).strip()
+                p_name, p_dir = project_from_filepath(t_cwd)
+                if p_dir:
+                    active_project_name = p_name
+                    active_project_path = p_dir
+                elif t_cwd and t_cwd != "/" and t_cwd != home:
+                    active_project_name = os.path.basename(t_cwd)
+                    active_project_path = t_cwd
+            except Exception:
+                pass
+
+    # Check standard terminal child processes (bash/zsh/fish/nvim running in foot/kitty)
+    if not active_project_path and win_pid > 0:
+        try:
+            children = subprocess.check_output(["pgrep", "-P", str(win_pid)], text=True, stderr=subprocess.DEVNULL).split()
+            for cpid in reversed(children):
+                c_cwd = os.path.realpath(f"/proc/{cpid}/cwd")
+                p_name, p_dir = project_from_filepath(c_cwd)
+                if p_dir:
+                    active_project_name = p_name
+                    active_project_path = p_dir
+                    break
+        except Exception:
+            pass
+
+# 1c. Check open file descriptors of active window process (e.g. Zed / VSCode open files)
 if not active_project_path and win_pid > 0:
     try:
         fd_dir = f"/proc/{win_pid}/fd"
@@ -175,7 +177,7 @@ if not active_project_path and win_pid > 0:
     except Exception:
         pass
 
-# 1f. Fallback: try omarchy-cmd-terminal-cwd
+# 1d. Fallback: try omarchy-cmd-terminal-cwd
 if not active_project_path:
     try:
         t_cwd = subprocess.check_output(["omarchy-cmd-terminal-cwd"], text=True, stderr=subprocess.DEVNULL).strip()
