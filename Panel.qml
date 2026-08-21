@@ -138,14 +138,65 @@ Panel {
                 spacing: 0
                 Layout.preferredWidth: Style.space(210)
 
-                Text {
-                  text: root.project.name
-                  font.family: Style.font.family
-                  font.pixelSize: Style.font.bodySmall
-                  font.weight: Font.Bold
-                  color: Color.foreground
-                  elide: Text.ElideRight
+                // Marquee Title Container
+                Item {
+                  id: titleMarqueeBox
                   Layout.preferredWidth: Style.space(210)
+                  Layout.preferredHeight: Style.space(18)
+                  clip: true
+
+                  readonly property bool needsMarquee: titleText.implicitWidth > titleMarqueeBox.width
+
+                  onNeedsMarqueeChanged: {
+                    titleText.x = 0
+                    if (titleMarqueeAnim.running) titleMarqueeAnim.restart()
+                  }
+
+                  Text {
+                    id: titleText
+                    text: root.project.name
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.bodySmall
+                    font.weight: Font.Bold
+                    color: Color.foreground
+                    y: 0
+                  }
+
+                  SequentialAnimation {
+                    id: titleMarqueeAnim
+                    running: root.opened && titleMarqueeBox.needsMarquee
+                    loops: Animation.Infinite
+
+                    PauseAnimation { duration: 1800 }
+                    NumberAnimation {
+                      target: titleText
+                      property: "x"
+                      from: 0
+                      to: -(titleText.implicitWidth - titleMarqueeBox.width + Style.space(12))
+                      duration: Math.max(1500, (titleText.implicitWidth - titleMarqueeBox.width) * 35)
+                      easing.type: Easing.Linear
+                    }
+                    PauseAnimation { duration: 1800 }
+                    NumberAnimation {
+                      target: titleText
+                      property: "x"
+                      to: 0
+                      duration: 500
+                      easing.type: Easing.InOutQuad
+                    }
+                  }
+
+                  MouseArea {
+                    id: titleHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.NoButton
+                  }
+
+                  PanelToolTip {
+                    visible: titleHover.containsMouse
+                    text: root.project.name
+                  }
                 }
 
                 // Marquee Path Container
