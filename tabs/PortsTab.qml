@@ -40,8 +40,8 @@ Item {
         width: refreshBtn.implicitWidth + Style.space(12)
         height: Style.space(24)
         radius: Style.cornerRadius
-        color: refreshMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.12) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.05)
-        border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+        color: refreshMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.14) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.05)
+        border.color: refreshMouse.containsMouse ? Color.accent : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
         border.width: 1
 
         RowLayout {
@@ -53,13 +53,13 @@ Item {
             text: "󰑐"
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
-            color: Color.foreground
+            color: refreshMouse.containsMouse ? Color.accent : Color.foreground
           }
           Text {
             text: "Refresh"
             font.family: Style.font.family
             font.pixelSize: Style.font.caption
-            color: Color.foreground
+            color: refreshMouse.containsMouse ? Color.accent : Color.foreground
           }
         }
 
@@ -120,7 +120,7 @@ Item {
 
             Text {
               visible: modelData.path !== ""
-              text: "(" + modelData.path + ")"
+              text: "(" + Model.shortenPath(modelData.path) + ")"
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               color: Color.muted
@@ -152,18 +152,29 @@ Item {
             model: modelData.ports
 
             delegate: Rectangle {
+              id: portRowCard
               Layout.fillWidth: true
               Layout.preferredHeight: Style.space(48)
               radius: Style.cornerRadius
-              color: rowMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
-              border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
+              color: rowHoverArea.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
+              border.color: rowHoverArea.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
               border.width: 1
+
+              // Background row hover detector placed behind controls
+              MouseArea {
+                id: rowHoverArea
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+                z: 0
+              }
 
               RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: Style.space(10)
                 anchors.rightMargin: Style.space(10)
                 spacing: Style.space(10)
+                z: 1
 
                 // Process Icon
                 Text {
@@ -176,7 +187,7 @@ Item {
                 // Process and PID
                 ColumnLayout {
                   spacing: Style.space(1)
-                  Layout.preferredWidth: Style.space(150)
+                  Layout.preferredWidth: Style.space(145)
 
                   Text {
                     text: modelData.process + (modelData.pid > 0 ? " (PID " + modelData.pid + ")" : "")
@@ -195,13 +206,14 @@ Item {
                   }
                 }
 
-                // Port Badge
+                // Port Badge (Clickable to copy)
                 Rectangle {
+                  id: portBadge
                   Layout.preferredWidth: portText.implicitWidth + Style.space(12)
-                  Layout.preferredHeight: Style.space(22)
+                  Layout.preferredHeight: Style.space(24)
                   radius: Style.cornerRadius
-                  color: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.15)
-                  border.color: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3)
+                  color: badgeMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.25) : Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.15)
+                  border.color: badgeMouse.containsMouse ? Color.accent : Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3)
                   border.width: 1
 
                   Text {
@@ -213,6 +225,22 @@ Item {
                     font.weight: Font.Bold
                     color: Color.accent
                   }
+
+                  MouseArea {
+                    id: badgeMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      var url = Model.formatPortUrl(modelData.ip, modelData.port)
+                      Quickshell.clipboardText = url
+                    }
+                  }
+
+                  PanelToolTip {
+                    visible: badgeMouse.containsMouse
+                    text: "Click to copy " + Model.formatPortUrl(modelData.ip, modelData.port)
+                  }
                 }
 
                 Item { Layout.fillWidth: true }
@@ -220,17 +248,20 @@ Item {
                 // Action Buttons
                 // 1. Open in Browser
                 Rectangle {
+                  id: openBtn
                   width: Style.space(28)
                   height: Style.space(28)
                   radius: Style.cornerRadius
-                  color: openMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+                  color: openMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.25) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+                  border.color: openMouse.containsMouse ? Color.accent : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+                  border.width: 1
 
                   Text {
                     anchors.centerIn: parent
                     text: "󰐊"
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
-                    color: Color.foreground
+                    color: openMouse.containsMouse ? Color.accent : Color.foreground
                   }
 
                   MouseArea {
@@ -255,17 +286,20 @@ Item {
 
                 // 2. Copy URL
                 Rectangle {
+                  id: copyBtn
                   width: Style.space(28)
                   height: Style.space(28)
                   radius: Style.cornerRadius
-                  color: copyMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+                  color: copyMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.25) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+                  border.color: copyMouse.containsMouse ? Color.accent : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+                  border.width: 1
 
                   Text {
                     anchors.centerIn: parent
                     text: "󰆏"
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
-                    color: Color.foreground
+                    color: copyMouse.containsMouse ? Color.accent : Color.foreground
                   }
 
                   MouseArea {
@@ -285,13 +319,14 @@ Item {
                   }
                 }
 
-                // 3. Kill Process
+                // 3. Kill Process (with compact inline popup)
                 Rectangle {
+                  id: killBtn
                   width: Style.space(28)
                   height: Style.space(28)
                   radius: Style.cornerRadius
                   color: killMouse.containsMouse ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3) : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.1)
-                  border.color: Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3)
+                  border.color: killMouse.containsMouse ? Color.urgent : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3)
                   border.width: 1
 
                   Text {
@@ -299,6 +334,7 @@ Item {
                     text: "󰅖"
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
+                    font.weight: Font.Bold
                     color: Color.urgent
                   }
 
@@ -307,31 +343,106 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                      if (actionProc) {
-                        if (modelData.pid > 0) {
-                          actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-pid", String(modelData.pid)]
-                        } else {
-                          actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-port", String(modelData.port)]
-                        }
-                        actionProc.running = true
-                        Qt.callLater(root.onRefresh)
-                      }
-                    }
+                    onClicked: confirmPopup.open()
                   }
 
                   PanelToolTip {
-                    visible: killMouse.containsMouse
+                    visible: killMouse.containsMouse && !confirmPopup.visible
                     text: modelData.pid > 0 ? "Kill process " + modelData.process + " (PID " + modelData.pid + ")" : "Kill port :" + modelData.port
                   }
-                }
-              }
 
-              MouseArea {
-                id: rowMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
+                  // Compact micro confirmation popup
+                  Popup {
+                    id: confirmPopup
+                    x: -(implicitWidth - parent.width)
+                    y: -implicitHeight - Style.space(4)
+                    padding: Style.space(4)
+                    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+
+                    background: Rectangle {
+                      radius: Style.cornerRadius
+                      color: Color.background
+                      border.color: Color.urgent
+                      border.width: 1
+                    }
+
+                    contentItem: RowLayout {
+                      spacing: Style.space(6)
+
+                      Text {
+                        text: "Kill :" + modelData.port + "?"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.caption
+                        font.weight: Font.Bold
+                        color: Color.urgent
+                        leftPadding: Style.space(4)
+                      }
+
+                      // Yes Button
+                      Rectangle {
+                        width: yesText.implicitWidth + Style.space(12)
+                        height: Style.space(22)
+                        radius: Style.cornerRadius
+                        color: yesMouse.containsMouse ? Color.urgent : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.25)
+
+                        Text {
+                          id: yesText
+                          anchors.centerIn: parent
+                          text: "Yes"
+                          font.family: Style.font.family
+                          font.pixelSize: Style.font.caption
+                          font.weight: Font.Bold
+                          color: yesMouse.containsMouse ? "#ffffff" : Color.urgent
+                        }
+
+                        MouseArea {
+                          id: yesMouse
+                          anchors.fill: parent
+                          hoverEnabled: true
+                          cursorShape: Qt.PointingHandCursor
+                          onClicked: {
+                            confirmPopup.close()
+                            if (actionProc) {
+                              if (modelData.pid > 0) {
+                                actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-pid", String(modelData.pid)]
+                              } else {
+                                actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-port", String(modelData.port)]
+                              }
+                              actionProc.running = true
+                              Qt.callLater(root.onRefresh)
+                            }
+                          }
+                        }
+                      }
+
+                      // No / Cancel Button
+                      Rectangle {
+                        width: noText.implicitWidth + Style.space(12)
+                        height: Style.space(22)
+                        radius: Style.cornerRadius
+                        color: noMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.2) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+                        Text {
+                          id: noText
+                          anchors.centerIn: parent
+                          text: "No"
+                          font.family: Style.font.family
+                          font.pixelSize: Style.font.caption
+                          font.weight: Font.Medium
+                          color: Color.foreground
+                        }
+
+                        MouseArea {
+                          id: noMouse
+                          anchors.fill: parent
+                          hoverEnabled: true
+                          cursorShape: Qt.PointingHandCursor
+                          onClicked: confirmPopup.close()
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
