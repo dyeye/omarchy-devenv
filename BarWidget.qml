@@ -69,29 +69,8 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    slotSize: Style.bar.statusSlot
+    text: "󱁐"
     tooltipText: "DevEnv (" + root.projectName + ")"
-
-    contentItem: RowLayout {
-      anchors.centerIn: parent
-      spacing: Style.space(4)
-
-      Text {
-        text: "󱁐"
-        font.family: Style.font.family
-        font.pixelSize: Style.font.icon
-        color: root.dirtyCount > 0 ? Color.accent : (root.bar ? root.bar.foreground : Color.foreground)
-      }
-
-      Text {
-        visible: root.portCount > 0
-        text: "󰒋" + root.portCount
-        font.family: Style.font.family
-        font.pixelSize: Style.font.caption
-        font.weight: Font.DemiBold
-        color: Color.accent
-      }
-    }
 
     onPressed: function(b) {
       if (!root.bar) return
