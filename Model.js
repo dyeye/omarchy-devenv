@@ -6,9 +6,29 @@ function parseScan(rawOutput) {
   }
   try {
     var data = JSON.parse(rawOutput);
+    var gitData = data.git || {};
     return {
       project: data.project || { path: "", name: "No Project", stack: "generic", hasCompose: false },
-      git: data.git || { hasRepo: false, branch: "", lastCommit: "", dirty: 0, staged: 0, untracked: 0, ahead: 0, behind: 0 },
+      git: {
+        hasRepo: gitData.hasRepo === true,
+        repoPath: gitData.repoPath || "",
+        repoName: gitData.repoName || "",
+        branch: gitData.branch || "",
+        branches: Array.isArray(gitData.branches) ? gitData.branches : [],
+        lastCommit: gitData.lastCommit || "",
+        commits: Array.isArray(gitData.commits) ? gitData.commits : [],
+        stashes: Array.isArray(gitData.stashes) ? gitData.stashes : [],
+        dirty: typeof gitData.dirty === "number" ? gitData.dirty : 0,
+        staged: typeof gitData.staged === "number" ? gitData.staged : 0,
+        untracked: typeof gitData.untracked === "number" ? gitData.untracked : 0,
+        ahead: typeof gitData.ahead === "number" ? gitData.ahead : 0,
+        behind: typeof gitData.behind === "number" ? gitData.behind : 0,
+        remoteUrl: gitData.remoteUrl || "",
+        isGitHub: gitData.isGitHub === true,
+        githubRepo: gitData.githubRepo || "",
+        pullRequests: Array.isArray(gitData.pullRequests) ? gitData.pullRequests : [],
+        issues: Array.isArray(gitData.issues) ? gitData.issues : []
+      },
       ports: Array.isArray(data.ports) ? data.ports : [],
       docker: data.docker || { available: false, containers: [] }
     };
@@ -21,7 +41,26 @@ function parseScan(rawOutput) {
 function defaultState() {
   return {
     project: { path: "", name: "No Project", stack: "generic", hasCompose: false },
-    git: { hasRepo: false, branch: "", lastCommit: "", dirty: 0, staged: 0, untracked: 0, ahead: 0, behind: 0 },
+    git: {
+      hasRepo: false,
+      repoPath: "",
+      repoName: "",
+      branch: "",
+      branches: [],
+      lastCommit: "",
+      commits: [],
+      stashes: [],
+      dirty: 0,
+      staged: 0,
+      untracked: 0,
+      ahead: 0,
+      behind: 0,
+      remoteUrl: "",
+      isGitHub: false,
+      githubRepo: "",
+      pullRequests: [],
+      issues: []
+    },
     ports: [],
     docker: { available: false, containers: [] }
   };

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/share/mise/installs/gh/latest/gh_2.98.0_linux_amd64/bin:$PATH"
+
 ACTION="${1:-}"
 TARGET="${2:-}"
+EXTRA="${3:-}"
 
 case "$ACTION" in
   kill-pid)
@@ -64,6 +67,48 @@ case "$ACTION" in
     fi
     ;;
 
+  git-checkout)
+    DIR="${TARGET:-$HOME}"
+    BRANCH="${EXTRA:-}"
+    if [[ -d "$DIR" && -n "$BRANCH" ]]; then
+      git -C "$DIR" checkout "$BRANCH" >/dev/null 2>&1 || true
+      echo "{\"success\":true,\"action\":\"git-checkout\",\"branch\":\"$BRANCH\"}"
+    fi
+    ;;
+
+  git-fetch)
+    DIR="${TARGET:-$HOME}"
+    if [[ -d "$DIR" ]]; then
+      git -C "$DIR" fetch --all >/dev/null 2>&1 || true
+      echo "{\"success\":true,\"action\":\"git-fetch\"}"
+    fi
+    ;;
+
+  git-pull)
+    DIR="${TARGET:-$HOME}"
+    if [[ -d "$DIR" ]]; then
+      git -C "$DIR" pull >/dev/null 2>&1 || true
+      echo "{\"success\":true,\"action\":\"git-pull\"}"
+    fi
+    ;;
+
+  git-push)
+    DIR="${TARGET:-$HOME}"
+    if [[ -d "$DIR" ]]; then
+      git -C "$DIR" push >/dev/null 2>&1 || true
+      echo "{\"success\":true,\"action\":\"git-push\"}"
+    fi
+    ;;
+
+  git-stash-pop)
+    DIR="${TARGET:-$HOME}"
+    STASH_IDX="${EXTRA:-0}"
+    if [[ -d "$DIR" ]]; then
+      git -C "$DIR" stash pop "stash@{$STASH_IDX}" >/dev/null 2>&1 || true
+      echo "{\"success\":true,\"action\":\"git-stash-pop\",\"stash\":$STASH_IDX}"
+    fi
+    ;;
+
   open-browser)
     if [[ -n "$TARGET" ]]; then
       xdg-open "$TARGET" >/dev/null 2>&1 &
@@ -110,7 +155,11 @@ case "$ACTION" in
   open-editor)
     DIR="${TARGET:-$HOME}"
     if [[ -d "$DIR" ]]; then
-      if command -v code >/dev/null 2>&1; then
+      if command -v zeditor >/dev/null 2>&1; then
+        zeditor "$DIR" >/dev/null 2>&1 &
+      elif command -v zed >/dev/null 2>&1; then
+        zed "$DIR" >/dev/null 2>&1 &
+      elif command -v code >/dev/null 2>&1; then
         code "$DIR" >/dev/null 2>&1 &
       elif command -v cursor >/dev/null 2>&1; then
         cursor "$DIR" >/dev/null 2>&1 &

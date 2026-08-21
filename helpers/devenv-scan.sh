@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/share/mise/installs/gh/latest/gh_2.98.0_linux_amd64/bin:$PATH"
+
 # Execute the smart Python scanner for ultra-fast, robust detection
 python3 - <<'EOF'
 import os
@@ -260,12 +262,20 @@ git_has_repo = False
 git_repo_path = ""
 git_repo_name = ""
 git_branch = ""
+git_branches = []
 git_last_commit = ""
+git_commits = []
+git_stashes = []
 git_dirty = 0
 git_staged = 0
 git_untracked = 0
 git_ahead = 0
 git_behind = 0
+git_remote_url = ""
+is_github = False
+github_repo = ""
+pull_requests = []
+issues = []
 
 try:
     git_root = subprocess.check_output(["git", "-C", active_project_path, "rev-parse", "--show-toplevel"], text=True, stderr=subprocess.DEVNULL).strip()
@@ -283,9 +293,55 @@ try:
             git_branch = "HEAD"
 
         try:
+            raw_branches = subprocess.check_output(["git", "-C", git_root, "branch", "-a", "--format=%(refname:short)"], text=True, stderr=subprocess.DEVNULL).splitlines()
+            seen_b = set()
+            if git_branch:
+                git_branches.append(git_branch)
+                seen_b.add(git_branch)
+            for b in raw_branches:
+                b = b.strip()
+                if not b or "->" in b: continue
+                clean_b = re.sub(r"^(remotes/)?(origin|upstream)/", "", b).strip()
+                if clean_b and clean_b not in {"origin", "upstream", "HEAD"} and clean_b not in seen_b:
+                    seen_b.add(clean_b)
+                    git_branches.append(clean_b)
+        except Exception:
+            git_branches = [git_branch] if git_branch else []
+
+        try:
             git_last_commit = subprocess.check_output(["git", "-C", git_root, "log", "-1", "--pretty=format:%s"], text=True, stderr=subprocess.DEVNULL).strip()
         except Exception:
             git_last_commit = ""
+
+        try:
+            log_lines = subprocess.check_output(["git", "-C", git_root, "log", "-8", "--pretty=format:%h|||%H|||%an|||%cr|||%s"], text=True, stderr=subprocess.DEVNULL).splitlines()
+            for l in log_lines:
+                parts = l.split("|||")
+                if len(parts) == 5:
+                    git_commits.append({
+                        "hash": parts[0],
+                        "fullHash": parts[1],
+                        "author": parts[2],
+                        "date": parts[3],
+                        "message": parts[4]
+                    })
+        except Exception:
+            pass
+
+        try:
+            stash_lines = subprocess.check_output(["git", "-C", git_root, "stash", "list", "--pretty=format:%gd|||%cr|||%gs"], text=True, stderr=subprocess.DEVNULL).splitlines()
+            for l in stash_lines:
+                parts = l.split("|||")
+                if len(parts) == 3:
+                    m = re.search(r"\{(\d+)\}", parts[0])
+                    s_idx = int(m.group(1)) if m else 0
+                    git_stashes.append({
+                        "index": s_idx,
+                        "date": parts[1],
+                        "message": parts[2]
+                    })
+        except Exception:
+            pass
 
         try:
             status_lines = subprocess.check_output(["git", "-C", git_root, "status", "--porcelain"], text=True, stderr=subprocess.DEVNULL).splitlines()
@@ -310,6 +366,45 @@ try:
                     git_behind = int(counts[1])
         except Exception:
             pass
+
+        try:
+            git_remote_url = subprocess.check_output(["git", "-C", git_root, "remote", "get-url", "origin"], text=True, stderr=subprocess.DEVNULL).strip()
+            if "github.com" in git_remote_url:
+                is_github = True
+                m = re.search(r"github\.com[:/]([^/]+/[^/\.]+)", git_remote_url)
+                if m:
+                    github_repo = m.group(1)
+        except Exception:
+            pass
+
+        # Query GitHub PRs & Issues via gh if available
+        if github_repo:
+            try:
+                pr_raw = subprocess.check_output(["gh", "pr", "list", "--limit", "8", "--json", "number,title,author,url,state,headRefName", "-C", git_root], text=True, stderr=subprocess.DEVNULL)
+                pr_list = json.loads(pr_raw)
+                for pr in pr_list:
+                    pull_requests.append({
+                        "number": pr.get("number", 0),
+                        "title": pr.get("title", ""),
+                        "author": pr.get("author", {}).get("login", "") if isinstance(pr.get("author"), dict) else str(pr.get("author", "")),
+                        "url": pr.get("url", ""),
+                        "headRefName": pr.get("headRefName", "")
+                    })
+            except Exception:
+                pass
+
+            try:
+                iss_raw = subprocess.check_output(["gh", "issue", "list", "--limit", "8", "--json", "number,title,author,url,state", "-C", git_root], text=True, stderr=subprocess.DEVNULL)
+                iss_list = json.loads(iss_raw)
+                for iss in iss_list:
+                    issues.append({
+                        "number": iss.get("number", 0),
+                        "title": iss.get("title", ""),
+                        "author": iss.get("author", {}).get("login", "") if isinstance(iss.get("author"), dict) else str(iss.get("author", "")),
+                        "url": iss.get("url", "")
+                    })
+            except Exception:
+                pass
 except Exception:
     pass
 
@@ -475,12 +570,20 @@ result = {
         "repoPath": git_repo_path,
         "repoName": git_repo_name,
         "branch": git_branch,
+        "branches": git_branches,
         "lastCommit": git_last_commit,
+        "commits": git_commits,
+        "stashes": git_stashes,
         "dirty": git_dirty,
         "staged": git_staged,
         "untracked": git_untracked,
         "ahead": git_ahead,
-        "behind": git_behind
+        "behind": git_behind,
+        "remoteUrl": git_remote_url,
+        "isGitHub": is_github,
+        "githubRepo": github_repo,
+        "pullRequests": pull_requests,
+        "issues": issues
     },
     "ports": ports,
     "docker": {
