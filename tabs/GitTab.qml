@@ -55,13 +55,65 @@ Item {
               font.weight: Font.Bold
               color: Color.foreground
             }
-            Text {
-              text: root.git.hasRepo ? root.git.repoPath : root.project.path
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              color: Color.muted
-              elide: Text.ElideMiddle
+            Item {
+              id: gitMarqueeBox
               Layout.preferredWidth: Style.space(260)
+              Layout.preferredHeight: Style.space(16)
+              clip: true
+
+              readonly property string rawPath: root.git.hasRepo ? root.git.repoPath : root.project.path
+              readonly property string shortPath: Model.shortenPath(rawPath)
+              readonly property bool needsMarquee: gitPathText.implicitWidth > gitMarqueeBox.width
+
+              onRawPathChanged: {
+                gitPathText.x = 0
+                if (gitMarqueeAnim.running) gitMarqueeAnim.restart()
+              }
+
+              Text {
+                id: gitPathText
+                text: gitMarqueeBox.shortPath
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                color: Color.muted
+                y: 0
+              }
+
+              SequentialAnimation {
+                id: gitMarqueeAnim
+                running: gitMarqueeBox.needsMarquee
+                loops: Animation.Infinite
+
+                PauseAnimation { duration: 1800 }
+                NumberAnimation {
+                  target: gitPathText
+                  property: "x"
+                  from: 0
+                  to: -(gitPathText.implicitWidth - gitMarqueeBox.width + Style.space(10))
+                  duration: Math.max(2000, (gitPathText.implicitWidth - gitMarqueeBox.width) * 35)
+                  easing.type: Easing.Linear
+                }
+                PauseAnimation { duration: 1800 }
+                NumberAnimation {
+                  target: gitPathText
+                  property: "x"
+                  to: 0
+                  duration: 600
+                  easing.type: Easing.InOutQuad
+                }
+              }
+
+              MouseArea {
+                id: gitPathHover
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+              }
+
+              PanelToolTip {
+                visible: gitPathHover.containsMouse
+                text: gitMarqueeBox.rawPath
+              }
             }
           }
 

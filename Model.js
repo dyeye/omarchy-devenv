@@ -70,6 +70,17 @@ function groupPorts(portsList) {
   return result;
 }
 
+function shortenPath(p) {
+  if (!p) return "";
+  var str = String(p);
+  var home = "/home/dyeye";
+  if (str === home) return "~";
+  if (str.indexOf(home + "/") === 0) {
+    return "~" + str.substring(home.length);
+  }
+  return str;
+}
+
 function getProcessIcon(processName) {
   var p = String(processName || "").toLowerCase();
   if (p.indexOf("node") >= 0 || p.indexOf("vite") >= 0 || p.indexOf("next") >= 0 || p.indexOf("bun") >= 0 || p.indexOf("deno") >= 0) return "";

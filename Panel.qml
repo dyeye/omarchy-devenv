@@ -152,14 +152,68 @@ Panel {
                   font.weight: Font.Bold
                   color: Color.foreground
                   elide: Text.ElideRight
+                  Layout.preferredWidth: Style.space(210)
                 }
 
-                Text {
-                  text: root.project.path
-                  font.family: Style.font.family
-                  font.pixelSize: Style.font.caption
-                  color: Color.muted
-                  elide: Text.ElideMiddle
+                // Marquee Path Container
+                Item {
+                  id: marqueeBox
+                  Layout.preferredWidth: Style.space(210)
+                  Layout.preferredHeight: Style.space(16)
+                  clip: true
+
+                  readonly property string shortPath: Model.shortenPath(root.project.path)
+                  readonly property bool needsMarquee: pathText.implicitWidth > marqueeBox.width
+
+                  onShortPathChanged: {
+                    pathText.x = 0
+                    if (marqueeAnim.running) marqueeAnim.restart()
+                  }
+
+                  Text {
+                    id: pathText
+                    text: marqueeBox.shortPath
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: Color.muted
+                    y: 0
+                  }
+
+                  SequentialAnimation {
+                    id: marqueeAnim
+                    running: root.opened && marqueeBox.needsMarquee
+                    loops: Animation.Infinite
+
+                    PauseAnimation { duration: 1800 }
+                    NumberAnimation {
+                      target: pathText
+                      property: "x"
+                      from: 0
+                      to: -(pathText.implicitWidth - marqueeBox.width + Style.space(12))
+                      duration: Math.max(2000, (pathText.implicitWidth - marqueeBox.width) * 35)
+                      easing.type: Easing.Linear
+                    }
+                    PauseAnimation { duration: 1800 }
+                    NumberAnimation {
+                      target: pathText
+                      property: "x"
+                      to: 0
+                      duration: 600
+                      easing.type: Easing.InOutQuad
+                    }
+                  }
+
+                  MouseArea {
+                    id: pathHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.NoButton
+                  }
+
+                  PanelToolTip {
+                    visible: pathHover.containsMouse
+                    text: root.project.path
+                  }
                 }
               }
 
