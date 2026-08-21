@@ -15,6 +15,7 @@ Item {
   property var onRefresh: null
 
   readonly property var ports: (dataModel && dataModel.ports) ? dataModel.ports : []
+  readonly property var groupedPorts: Model.groupPorts(root.ports)
 
   ColumnLayout {
     anchors.fill: parent
@@ -26,7 +27,7 @@ Item {
       spacing: Style.space(8)
 
       Text {
-        text: "󰒋 Local Listening Ports (" + ports.length + ")"
+        text: "󰒋 Local Listening Ports (" + root.ports.length + ")"
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
         font.weight: Font.DemiBold
@@ -71,196 +72,281 @@ Item {
             if (typeof root.onRefresh === "function") root.onRefresh()
           }
         }
+
+        PanelToolTip {
+          visible: refreshMouse.containsMouse
+          text: "Scan listening ports now"
+        }
       }
     }
 
-    // List of ports
-    ListView {
-      id: portsList
+    // Scrollable grouped list
+    ScrollView {
+      id: portsScroll
       Layout.fillWidth: true
       Layout.fillHeight: true
       clip: true
-      spacing: Style.space(6)
-      model: root.ports
 
-      delegate: Rectangle {
-        width: portsList.width
-        height: Style.space(48)
-        radius: Style.cornerRadius
-        color: rowMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
-        border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
-        border.width: 1
+      ListView {
+        id: groupsList
+        width: portsScroll.width
+        spacing: Style.space(12)
+        model: root.groupedPorts
 
-        RowLayout {
-          anchors.fill: parent
-          anchors.leftMargin: Style.space(10)
-          anchors.rightMargin: Style.space(10)
-          spacing: Style.space(10)
+        delegate: ColumnLayout {
+          width: groupsList.width
+          spacing: Style.space(6)
 
-          // Process Icon
-          Text {
-            text: Model.getProcessIcon(modelData.process)
-            font.family: Style.font.family
-            font.pixelSize: Style.font.body
-            color: Color.accent
-          }
-
-          // Process and PID
-          ColumnLayout {
-            spacing: Style.space(1)
-            Layout.preferredWidth: Style.space(140)
+          // Category Header
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: Style.space(6)
 
             Text {
-              text: modelData.process + (modelData.pid > 0 ? " (PID " + modelData.pid + ")" : "")
-              font.family: Style.font.family
-              font.pixelSize: Style.font.bodySmall
-              font.weight: Font.Medium
-              color: Color.foreground
-              elide: Text.ElideRight
-            }
-
-            Text {
-              text: modelData.ip
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              color: Color.muted
-            }
-          }
-
-          // Port Badge
-          Rectangle {
-            Layout.preferredWidth: portText.implicitWidth + Style.space(12)
-            Layout.preferredHeight: Style.space(22)
-            radius: Style.cornerRadius
-            color: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.15)
-            border.color: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3)
-            border.width: 1
-
-            Text {
-              id: portText
-              anchors.centerIn: parent
-              text: ":" + modelData.port
+              text: modelData.type === "project" ? "󰉋" : "󱥸"
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               font.weight: Font.Bold
-              color: Color.accent
+              color: modelData.type === "project" ? Color.accent : Color.muted
+            }
+
+            Text {
+              text: modelData.name
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.weight: Font.Bold
+              color: modelData.type === "project" ? Color.accent : Color.muted
+            }
+
+            Text {
+              visible: modelData.path !== ""
+              text: "(" + modelData.path + ")"
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              color: Color.muted
+              elide: Text.ElideMiddle
+              Layout.fillWidth: true
+            }
+
+            Item { visible: modelData.path === ""; Layout.fillWidth: true }
+
+            Rectangle {
+              Layout.preferredWidth: groupCountText.implicitWidth + Style.space(8)
+              Layout.preferredHeight: Style.space(18)
+              radius: Style.cornerRadius
+              color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+              Text {
+                id: groupCountText
+                anchors.centerIn: parent
+                text: modelData.ports.length + (modelData.ports.length === 1 ? " port" : " ports")
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                color: Color.muted
+              }
             }
           }
 
-          Item { Layout.fillWidth: true }
+          // Ports in this category
+          Repeater {
+            model: modelData.ports
 
-          // Action Buttons
-          // 1. Open in Browser
-          Rectangle {
-            width: Style.space(28)
-            height: Style.space(28)
-            radius: Style.cornerRadius
-            color: openMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+            delegate: Rectangle {
+              Layout.fillWidth: true
+              Layout.preferredHeight: Style.space(48)
+              radius: Style.cornerRadius
+              color: rowMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.04)
+              border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
+              border.width: 1
 
-            Text {
-              anchors.centerIn: parent
-              text: "󰐊"
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              color: Color.foreground
-            }
+              RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Style.space(10)
+                anchors.rightMargin: Style.space(10)
+                spacing: Style.space(10)
 
-            MouseArea {
-              id: openMouse
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                var url = Model.formatPortUrl(modelData.ip, modelData.port)
-                if (actionProc) {
-                  actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "open-browser", url]
-                  actionProc.running = true
+                // Process Icon
+                Text {
+                  text: Model.getProcessIcon(modelData.process)
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.body
+                  color: Color.accent
                 }
-              }
-            }
-          }
 
-          // 2. Copy URL
-          Rectangle {
-            width: Style.space(28)
-            height: Style.space(28)
-            radius: Style.cornerRadius
-            color: copyMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+                // Process and PID
+                ColumnLayout {
+                  spacing: Style.space(1)
+                  Layout.preferredWidth: Style.space(150)
 
-            Text {
-              anchors.centerIn: parent
-              text: "󰆏"
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              color: Color.foreground
-            }
-
-            MouseArea {
-              id: copyMouse
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                var url = Model.formatPortUrl(modelData.ip, modelData.port)
-                Quickshell.clipboardText = url
-              }
-            }
-          }
-
-          // 3. Kill Process
-          Rectangle {
-            width: Style.space(28)
-            height: Style.space(28)
-            radius: Style.cornerRadius
-            color: killMouse.containsMouse ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3) : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.1)
-            border.color: Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3)
-            border.width: 1
-
-            Text {
-              anchors.centerIn: parent
-              text: "󰅖"
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              color: Color.urgent
-            }
-
-            MouseArea {
-              id: killMouse
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                if (actionProc) {
-                  if (modelData.pid > 0) {
-                    actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-pid", String(modelData.pid)]
-                  } else {
-                    actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-port", String(modelData.port)]
+                  Text {
+                    text: modelData.process + (modelData.pid > 0 ? " (PID " + modelData.pid + ")" : "")
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.bodySmall
+                    font.weight: Font.Medium
+                    color: Color.foreground
+                    elide: Text.ElideRight
                   }
-                  actionProc.running = true
-                  Qt.callLater(root.onRefresh)
+
+                  Text {
+                    text: modelData.ip
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: Color.muted
+                  }
                 }
+
+                // Port Badge
+                Rectangle {
+                  Layout.preferredWidth: portText.implicitWidth + Style.space(12)
+                  Layout.preferredHeight: Style.space(22)
+                  radius: Style.cornerRadius
+                  color: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.15)
+                  border.color: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3)
+                  border.width: 1
+
+                  Text {
+                    id: portText
+                    anchors.centerIn: parent
+                    text: ":" + modelData.port
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    font.weight: Font.Bold
+                    color: Color.accent
+                  }
+                }
+
+                Item { Layout.fillWidth: true }
+
+                // Action Buttons
+                // 1. Open in Browser
+                Rectangle {
+                  width: Style.space(28)
+                  height: Style.space(28)
+                  radius: Style.cornerRadius
+                  color: openMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: "󰐊"
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: Color.foreground
+                  }
+
+                  MouseArea {
+                    id: openMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      var url = Model.formatPortUrl(modelData.ip, modelData.port)
+                      if (actionProc) {
+                        actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "open-browser", url]
+                        actionProc.running = true
+                      }
+                    }
+                  }
+
+                  PanelToolTip {
+                    visible: openMouse.containsMouse
+                    text: "Open " + Model.formatPortUrl(modelData.ip, modelData.port) + " in browser"
+                  }
+                }
+
+                // 2. Copy URL
+                Rectangle {
+                  width: Style.space(28)
+                  height: Style.space(28)
+                  radius: Style.cornerRadius
+                  color: copyMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: "󰆏"
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: Color.foreground
+                  }
+
+                  MouseArea {
+                    id: copyMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      var url = Model.formatPortUrl(modelData.ip, modelData.port)
+                      Quickshell.clipboardText = url
+                    }
+                  }
+
+                  PanelToolTip {
+                    visible: copyMouse.containsMouse
+                    text: "Copy " + Model.formatPortUrl(modelData.ip, modelData.port) + " to clipboard"
+                  }
+                }
+
+                // 3. Kill Process
+                Rectangle {
+                  width: Style.space(28)
+                  height: Style.space(28)
+                  radius: Style.cornerRadius
+                  color: killMouse.containsMouse ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3) : Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.1)
+                  border.color: Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3)
+                  border.width: 1
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: "󰅖"
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: Color.urgent
+                  }
+
+                  MouseArea {
+                    id: killMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      if (actionProc) {
+                        if (modelData.pid > 0) {
+                          actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-pid", String(modelData.pid)]
+                        } else {
+                          actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-port", String(modelData.port)]
+                        }
+                        actionProc.running = true
+                        Qt.callLater(root.onRefresh)
+                      }
+                    }
+                  }
+
+                  PanelToolTip {
+                    visible: killMouse.containsMouse
+                    text: modelData.pid > 0 ? "Kill process " + modelData.process + " (PID " + modelData.pid + ")" : "Kill port :" + modelData.port
+                  }
+                }
+              }
+
+              MouseArea {
+                id: rowMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
               }
             }
           }
         }
-
-        MouseArea {
-          id: rowMouse
-          anchors.fill: parent
-          hoverEnabled: true
-          acceptedButtons: Qt.NoButton
-        }
       }
+    }
 
-      // Empty state
-      Text {
-        anchors.centerIn: parent
-        visible: root.ports.length === 0
-        text: "󰒋 No active listening ports"
-        font.family: Style.font.family
-        font.pixelSize: Style.font.body
-        color: Color.muted
-      }
+    // Empty state
+    Text {
+      Layout.alignment: Qt.AlignCenter
+      visible: root.ports.length === 0
+      text: "󰒋 No active listening ports"
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
+      color: Color.muted
     }
   }
 }

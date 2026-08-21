@@ -183,6 +183,10 @@ Panel {
                     actionProc.running = true
                   }
                 }
+                PanelToolTip {
+                  visible: tMouse.containsMouse
+                  text: "Open terminal in project directory"
+                }
               }
 
               // Lazygit
@@ -191,7 +195,7 @@ Panel {
                 height: Style.space(26)
                 radius: Style.cornerRadius
                 color: lMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.18) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
-                Text { anchors.centerIn: parent; text: "󰘐"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.foreground }
+                Text { anchors.centerIn: parent; text: "󰊢"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.foreground }
                 MouseArea {
                   id: lMouse
                   anchors.fill: parent
@@ -201,6 +205,10 @@ Panel {
                     actionProc.command = [Qt.resolvedUrl("helpers/devenv-action.sh").toString().replace("file://", ""), "open-lazygit", root.project.path]
                     actionProc.running = true
                   }
+                }
+                PanelToolTip {
+                  visible: lMouse.containsMouse
+                  text: "Open lazygit in project directory"
                 }
               }
 
@@ -220,6 +228,10 @@ Panel {
                     actionProc.command = [Qt.resolvedUrl("helpers/devenv-action.sh").toString().replace("file://", ""), "open-editor", root.project.path]
                     actionProc.running = true
                   }
+                }
+                PanelToolTip {
+                  visible: eMouse.containsMouse
+                  text: "Open project in editor"
                 }
               }
             }

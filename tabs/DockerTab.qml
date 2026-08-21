@@ -90,6 +90,11 @@ Item {
               }
             }
           }
+
+          PanelToolTip {
+            visible: upMouse.containsMouse
+            text: "Run docker compose up -d in project"
+          }
         }
 
         // Compose Down Button
@@ -119,6 +124,11 @@ Item {
                 Qt.callLater(root.onRefresh)
               }
             }
+          }
+
+          PanelToolTip {
+            visible: downMouse.containsMouse
+            text: "Run docker compose down in project"
           }
         }
       }
@@ -248,6 +258,11 @@ Item {
                   }
                 }
               }
+
+              PanelToolTip {
+                visible: toggleMouse.containsMouse
+                text: modelData.state === "running" ? "Stop " + modelData.name : "Start " + modelData.name
+              }
             }
 
             // Restart Button
@@ -278,6 +293,11 @@ Item {
                   }
                 }
               }
+
+              PanelToolTip {
+                visible: restMouse.containsMouse
+                text: "Restart " + modelData.name
+              }
             }
 
             // View Logs Button
@@ -306,6 +326,11 @@ Item {
                   root.showingLogs = true
                   logProc.running = true
                 }
+              }
+
+              PanelToolTip {
+                visible: logMouse.containsMouse
+                text: "View logs for " + modelData.name
               }
             }
           }

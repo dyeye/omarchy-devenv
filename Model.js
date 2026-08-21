@@ -27,6 +27,49 @@ function defaultState() {
   };
 }
 
+function groupPorts(portsList) {
+  var list = portsList || [];
+  var projectMap = {};
+  var projectGroups = [];
+  var processList = [];
+
+  for (var i = 0; i < list.length; i++) {
+    var item = list[i];
+    var catType = item.categoryType || "process";
+    var catName = item.categoryName || "General Processes";
+
+    if (catType === "project") {
+      if (!projectMap[catName]) {
+        var groupObj = {
+          name: catName,
+          path: item.categoryPath || "",
+          type: "project",
+          ports: []
+        };
+        projectMap[catName] = groupObj;
+        projectGroups.push(groupObj);
+      }
+      projectMap[catName].ports.push(item);
+    } else {
+      processList.push(item);
+    }
+  }
+
+  var result = [];
+  for (var p = 0; p < projectGroups.length; p++) {
+    result.push(projectGroups[p]);
+  }
+  if (processList.length > 0) {
+    result.push({
+      name: "General Processes",
+      path: "",
+      type: "process",
+      ports: processList
+    });
+  }
+  return result;
+}
+
 function getProcessIcon(processName) {
   var p = String(processName || "").toLowerCase();
   if (p.indexOf("node") >= 0 || p.indexOf("vite") >= 0 || p.indexOf("next") >= 0 || p.indexOf("bun") >= 0 || p.indexOf("deno") >= 0) return "";
@@ -85,7 +128,6 @@ function minifyJson(input) {
 function timestampToDate(timestampStr) {
   var n = Number(timestampStr);
   if (!isFinite(n) || n <= 0) return "Invalid Timestamp";
-  // If in seconds (10 digits) convert to ms
   if (n < 10000000000) n = n * 1000;
   var d = new Date(n);
   return d.toISOString().replace("T", " ").replace("Z", " UTC") + " (" + d.toLocaleString() + ")";

@@ -216,6 +216,11 @@ Item {
             }
           }
         }
+
+        PanelToolTip {
+          visible: lzMouse.containsMouse
+          text: "Open lazygit in " + (root.git.hasRepo ? (root.git.repoName !== "" ? root.git.repoName : root.project.name) : root.project.name)
+        }
       }
 
       // 2. Open Terminal
@@ -247,6 +252,11 @@ Item {
             }
           }
         }
+
+        PanelToolTip {
+          visible: termMouse.containsMouse
+          text: "Open terminal in project folder"
+        }
       }
 
       // 3. Open Editor
@@ -277,6 +287,11 @@ Item {
               actionProc.running = true
             }
           }
+        }
+
+        PanelToolTip {
+          visible: editMouse.containsMouse
+          text: "Open project in code editor"
         }
       }
     }
