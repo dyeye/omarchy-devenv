@@ -105,17 +105,10 @@ Panel {
       anchors.fill: parent
       onCloseRequested: root.close()
 
-      Rectangle {
+      ColumnLayout {
         anchors.fill: parent
-        color: Color.popups.background
-        radius: Style.cornerRadius
-        border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
-        border.width: 1
-
-        ColumnLayout {
-          anchors.fill: parent
-          anchors.margins: Style.space(12)
-          spacing: Style.space(10)
+        anchors.margins: Style.space(8)
+        spacing: Style.space(8)
 
           // 1. Header with Project Info & Quick Launchers
           Rectangle {
@@ -426,4 +419,3 @@ Panel {
       }
     }
   }
-}
