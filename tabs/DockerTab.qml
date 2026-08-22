@@ -20,6 +20,11 @@ Item {
   readonly property var docker: (dataModel && dataModel.docker) ? dataModel.docker : { available: false, containers: [] }
   readonly property var project: (dataModel && dataModel.project) ? dataModel.project : { path: "", name: "", hasCompose: false }
 
+  function copyToClipboard(text) {
+    if (text === undefined || text === null) return
+    Quickshell.execDetached(["bash", "-c", "printf %s \"$1\" | wl-copy", "_", String(text)])
+  }
+
   // Process to fetch logs
   Process {
     id: logProc
@@ -709,7 +714,7 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: Quickshell.clipboardText = root.logOutputText
+                onClicked: root.copyToClipboard(root.logOutputText)
               }
               PanelToolTip {
                 visible: copyLogMouse.containsMouse

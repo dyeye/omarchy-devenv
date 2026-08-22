@@ -98,6 +98,11 @@ Panel {
     return false
   }
 
+  function copyToClipboard(text) {
+    if (text === undefined || text === null) return
+    Quickshell.execDetached(["bash", "-c", "printf %s \"$1\" | wl-copy", "_", String(text)])
+  }
+
   KeyboardPanel {
     id: panel
     anchorItem: root.anchorItem
@@ -705,7 +710,7 @@ Panel {
                 RowLayout {
                   anchors.centerIn: parent
                   spacing: Style.space(4)
-                  Text { text: "󰞋"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: root.activeTab === "toolbox" ? Color.accent : Color.foreground }
+                  Text { text: ""; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: root.activeTab === "toolbox" ? Color.accent : Color.foreground }
                   Text { text: "Toolbox"; font.family: Style.font.family; font.pixelSize: Style.font.caption; font.weight: root.activeTab === "toolbox" ? Font.Bold : Font.Normal; color: root.activeTab === "toolbox" ? Color.accent : Color.foreground }
                 }
 

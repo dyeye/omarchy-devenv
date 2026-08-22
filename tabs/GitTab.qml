@@ -15,6 +15,11 @@ Item {
   property var onRefresh: null
   property string gitSubTab: "commits" // "commits" | "prs" | "issues" | "stashes"
 
+  function copyToClipboard(text) {
+    if (text === undefined || text === null) return
+    Quickshell.execDetached(["bash", "-c", "printf %s \"$1\" | wl-copy", "_", String(text)])
+  }
+
   readonly property var git: (dataModel && dataModel.git) ? dataModel.git : {
     hasRepo: false,
     repoPath: "",
@@ -252,7 +257,7 @@ Item {
 
             Text {
               anchors.centerIn: parent
-              text: "󰘐"
+              text: "󰊢"
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               color: lzMouse.containsMouse ? Color.accent : Color.foreground
@@ -743,7 +748,7 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: Quickshell.clipboardText = modelData.fullHash || modelData.hash
+                onClicked: root.copyToClipboard(modelData.fullHash || modelData.hash)
               }
 
               PanelToolTip {

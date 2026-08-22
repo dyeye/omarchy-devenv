@@ -19,6 +19,11 @@ Item {
 
   property var collapsedGroups: ({ "General Processes": false })
 
+  function copyToClipboard(text) {
+    if (text === undefined || text === null) return
+    Quickshell.execDetached(["bash", "-c", "printf %s \"$1\" | wl-copy", "_", String(text)])
+  }
+
   function isGroupCollapsed(groupName) {
     return !!root.collapsedGroups[groupName]
   }
@@ -282,7 +287,7 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                       var url = Model.formatPortUrl(modelData.ip, modelData.port)
-                      Quickshell.clipboardText = url
+                      root.copyToClipboard(url)
                     }
                   }
 
@@ -358,7 +363,7 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                       var url = Model.formatPortUrl(modelData.ip, modelData.port)
-                      Quickshell.clipboardText = url
+                      root.copyToClipboard(url)
                     }
                   }
 
