@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH="$HOME/.local/share/mise/shims:$HOME/.local/share/mise/installs/gh/latest/gh_2.98.0_linux_amd64/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.local/share/mise/shims:$PATH"
+
+if ! command -v gh >/dev/null 2>&1; then
+  for gh_bin in "$HOME"/.local/share/mise/installs/gh/*/*/bin/gh; do
+    if [[ -x "$gh_bin" ]]; then
+      export PATH="$(dirname "$gh_bin"):$PATH"
+      break
+    fi
+  done
+fi
 
 # Execute the smart Python scanner for ultra-fast, robust detection
 python3 - <<'EOF'

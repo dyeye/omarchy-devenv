@@ -121,10 +121,14 @@ function groupPorts(portsList) {
 function shortenPath(p) {
   if (!p) return "";
   var str = String(p);
-  var home = "/home/dyeye";
-  if (str === home) return "~";
-  if (str.indexOf(home + "/") === 0) {
-    return "~" + str.substring(home.length);
+  var match = str.match(/^(\/home\/[^\/]+)/);
+  if (match) {
+    if (str === match[1]) return "~";
+    return "~" + str.substring(match[1].length);
+  }
+  if (str.indexOf("/root") === 0) {
+    if (str === "/root") return "~";
+    return "~" + str.substring(5);
   }
   return str;
 }
