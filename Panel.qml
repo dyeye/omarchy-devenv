@@ -91,12 +91,19 @@ Panel {
     }
   }
 
+  function switchPanel(direction) {
+    if (root.bar && typeof root.bar.switchPanelFrom === "function")
+      return root.bar.switchPanelFrom(root.barIdentity, direction)
+    return false
+  }
+
   KeyboardPanel {
     id: panel
     anchorItem: root.anchorItem
     owner: root.barIdentity
     bar: root.bar
     open: root.opened
+    focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(480))
     contentHeight: panel.fittedContentHeight(Style.space(440))
 
@@ -104,6 +111,7 @@ Panel {
       id: keyCatcher
       anchors.fill: parent
       onCloseRequested: root.close()
+      onTabRequested: function(direction) { root.switchPanel(direction) }
 
       ColumnLayout {
         anchors.fill: parent

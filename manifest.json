@@ -6,11 +6,12 @@
   "author": "dyeye",
   "license": "MIT",
   "description": "Local development mission control: ports, Docker, Git and dev toolbox.",
-  "kinds": ["bar-widget", "panel"],
+  "kinds": [
+    "bar-widget"
+  ],
   "activation": "on-demand",
   "entryPoints": {
-    "barWidget": "BarWidget.qml",
-    "panel": "Panel.qml"
+    "barWidget": "BarWidget.qml"
   },
   "barWidget": {
     "displayName": "DevEnv",
