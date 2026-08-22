@@ -32,7 +32,10 @@ Item {
     running: false
     stdout: SplitParser {
       onRead: function(line) {
-        root.logOutputText += line + "\n"
+        // Enforce strict memory ceiling (128 KB max) on container log collection
+        if (root.logOutputText.length < 131072) {
+          root.logOutputText += line + "\n"
+        }
       }
     }
   }

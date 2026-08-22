@@ -65,7 +65,10 @@ Panel {
     running: false
     stdout: SplitParser {
       onRead: function(line) {
-        root.rawScanOutput += line + "\n"
+        // Enforce strict memory ceiling (256 KB max) to prevent unbounded accumulation
+        if (root.rawScanOutput.length < 262144) {
+          root.rawScanOutput += line + "\n"
+        }
       }
     }
     onExited: function(exitCode, exitStatus) {
