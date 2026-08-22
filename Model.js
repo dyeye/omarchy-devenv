@@ -169,6 +169,17 @@ function formatPortUrl(ip, port) {
   return "http://" + host + ":" + port;
 }
 
+function copyToClipboard(text) {
+  if (text === undefined || text === null) return;
+  try {
+    if (typeof Quickshell !== "undefined" && typeof Quickshell.execDetached === "function") {
+      Quickshell.execDetached(["wl-copy", String(text)]);
+    }
+  } catch (e) {
+    console.warn("DevEnv: copyToClipboard error:", e);
+  }
+}
+
 // ---------------------------------------------------------------- Toolbox Helpers
 
 function formatJson(input, indent) {
@@ -184,39 +195,167 @@ function minifyJson(input) {
   return JSON.stringify(parsed);
 }
 
-function timestampToDate(timestampStr) {
-  var n = Number(timestampStr);
-  if (!isFinite(n) || n <= 0) return "Invalid Timestamp";
-  if (n < 10000000000) n = n * 1000;
-  var d = new Date(n);
-  return d.toISOString().replace("T", " ").replace("Z", " UTC") + " (" + d.toLocaleString() + ")";
+function validateJson(input) {
+  if (!input || input.trim() === "") return { valid: false, error: "Empty input" };
+  try {
+    var parsed = JSON.parse(input);
+    var isArr = Array.isArray(parsed);
+    var count = isArr ? parsed.length : Object.keys(parsed).length;
+    return {
+      valid: true,
+      type: isArr ? "Array (" + count + " items)" : "Object (" + count + " keys)",
+      bytes: encodeURIComponent(input).replace(/%[A-F\d]{2}/g, 'U').length
+    };
+  } catch (e) {
+    return { valid: false, error: e.message || "Invalid JSON syntax" };
+  }
 }
 
-function dateToTimestamp(dateStr) {
-  var d = dateStr && dateStr.trim() !== "" ? new Date(dateStr) : new Date();
-  if (isNaN(d.getTime())) return "Invalid Date";
+function timestampToDate(timestampStr) {
+  var n = Number(timestampStr);
+  if (!isFinite(n) || n <= 0) return { valid: false, error: "Invalid Timestamp" };
+  var ms = n < 10000000000 ? n * 1000 : n;
+  var d = new Date(ms);
+  if (isNaN(d.getTime())) return { valid: false, error: "Invalid Timestamp" };
+
   return {
-    seconds: Math.floor(d.getTime() / 1000),
-    milliseconds: d.getTime()
+    valid: true,
+    seconds: Math.floor(ms / 1000),
+    milliseconds: ms,
+    utc: d.toISOString().replace("T", " ").replace("Z", " UTC"),
+    iso: d.toISOString(),
+    local: d.toLocaleString(),
+    relative: formatRelativeTime(d)
   };
 }
 
+function dateToTimestamp(dateStr) {
+  var d;
+  if (!dateStr || dateStr.trim() === "" || dateStr.trim().toLowerCase() === "now") {
+    d = new Date();
+  } else {
+    d = new Date(dateStr);
+  }
+  if (isNaN(d.getTime())) return { valid: false, error: "Invalid Date String" };
+
+  return {
+    valid: true,
+    seconds: Math.floor(d.getTime() / 1000),
+    milliseconds: d.getTime(),
+    utc: d.toISOString().replace("T", " ").replace("Z", " UTC"),
+    local: d.toLocaleString(),
+    relative: formatRelativeTime(d)
+  };
+}
+
+function formatRelativeTime(d) {
+  var diffMs = Date.now() - d.getTime();
+  var diffSec = Math.floor(Math.abs(diffMs) / 1000);
+  var isPast = diffMs >= 0;
+  var prefix = isPast ? "" : "in ";
+  var suffix = isPast ? " ago" : "";
+
+  if (diffSec < 5) return "just now";
+  if (diffSec < 60) return prefix + diffSec + " seconds" + suffix;
+  var diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return prefix + diffMin + " min" + (diffMin === 1 ? "" : "s") + suffix;
+  var diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return prefix + diffHours + " hour" + (diffHours === 1 ? "" : "s") + suffix;
+  var diffDays = Math.floor(diffHours / 24);
+  return prefix + diffDays + " day" + (diffDays === 1 ? "" : "s") + suffix;
+}
+
 function base64Encode(str) {
-  return Qt.btoa(unescape(encodeURIComponent(str || "")));
+  if (!str) return "";
+  try {
+    if (typeof TextEncoder !== "undefined") {
+      return Qt.btoa(new TextEncoder().encode(str));
+    }
+    return Qt.btoa(unescape(encodeURIComponent(str)));
+  } catch (e) {
+    return Qt.btoa(unescape(encodeURIComponent(str)));
+  }
 }
 
 function base64Decode(str) {
+  if (!str) return "";
   try {
-    return decodeURIComponent(escape(Qt.atob(str || "")));
+    var res = Qt.atob(str.trim());
+    if (typeof TextDecoder !== "undefined" && res instanceof ArrayBuffer) {
+      return new TextDecoder().decode(res);
+    }
+    if (typeof res !== "string") {
+      var arr = new Uint8Array(res);
+      var binary = "";
+      for (var i = 0; i < arr.byteLength; i++) {
+        binary += String.fromCharCode(arr[i]);
+      }
+      return decodeURIComponent(escape(binary));
+    }
+    return decodeURIComponent(escape(res));
   } catch (e) {
     return "Error: Invalid Base64 String";
   }
 }
 
-function generateUuid() {
+function urlEncode(str) {
+  return encodeURIComponent(str || "");
+}
+
+function urlDecode(str) {
+  try {
+    return decodeURIComponent(str || "");
+  } catch (e) {
+    return "Error: Invalid URL encoding";
+  }
+}
+
+function generateUuidV4() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     var r = Math.random() * 16 | 0;
     var v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
+}
+
+function generateUuidV7() {
+  var now = Date.now();
+  var hexTime = now.toString(16);
+  while (hexTime.length < 12) hexTime = "0" + hexTime;
+  var p1 = hexTime.substring(0, 8);
+  var p2 = hexTime.substring(8, 12);
+  var randHex = "";
+  for (var i = 0; i < 18; i++) {
+    randHex += Math.floor(Math.random() * 16).toString(16);
+  }
+  var p3 = "7" + randHex.substring(0, 3);
+  var varDigit = (8 + Math.floor(Math.random() * 4)).toString(16);
+  var p4 = varDigit + randHex.substring(3, 6);
+  var p5 = randHex.substring(6, 18);
+  return p1 + "-" + p2 + "-" + p3 + "-" + p4 + "-" + p5;
+}
+
+function generateUuid(version) {
+  return version === "v7" ? generateUuidV7() : generateUuidV4();
+}
+
+function generateUuids(options) {
+  var opt = options || {};
+  var count = typeof opt.count === "number" ? Math.max(1, Math.min(opt.count, 50)) : 1;
+  var version = opt.version || "v4";
+  var uppercase = opt.uppercase === true;
+  var hyphens = opt.hyphens !== false;
+  var results = [];
+
+  for (var i = 0; i < count; i++) {
+    var uid = version === "v7" ? generateUuidV7() : generateUuidV4();
+    if (!hyphens) {
+      uid = uid.replace(/-/g, "");
+    }
+    if (uppercase) {
+      uid = uid.toUpperCase();
+    }
+    results.push(uid);
+  }
+  return results;
 }
