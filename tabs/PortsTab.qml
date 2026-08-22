@@ -17,6 +17,21 @@ Item {
   readonly property var ports: (dataModel && dataModel.ports) ? dataModel.ports : []
   readonly property var groupedPorts: Model.groupPorts(root.ports)
 
+  property var collapsedGroups: ({ "General Processes": false })
+
+  function isGroupCollapsed(groupName) {
+    return !!root.collapsedGroups[groupName]
+  }
+
+  function toggleGroup(groupName) {
+    var next = {}
+    for (var k in root.collapsedGroups) {
+      next[k] = root.collapsedGroups[k]
+    }
+    next[groupName] = !next[groupName]
+    root.collapsedGroups = next
+  }
+
   ColumnLayout {
     anchors.fill: parent
     spacing: Style.space(8)
@@ -90,66 +105,100 @@ Item {
       ListView {
         id: groupsList
         width: portsScroll.width
-        spacing: Style.space(12)
+        spacing: Style.space(10)
         model: root.groupedPorts
 
         delegate: ColumnLayout {
+          id: groupDelegate
           width: groupsList.width
           spacing: Style.space(6)
 
-          // Category Header
-          RowLayout {
+          readonly property bool isCollapsed: root.isGroupCollapsed(modelData.name)
+
+          // Clickable Category Header Card
+          Rectangle {
             Layout.fillWidth: true
-            spacing: Style.space(6)
+            Layout.preferredHeight: Style.space(26)
+            radius: Style.cornerRadius
+            color: headerMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.03)
+            border.color: headerMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+            border.width: 1
 
-            Text {
-              text: modelData.type === "project" ? "󰉋" : ""
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              font.weight: Font.Bold
-              color: modelData.type === "project" ? Color.accent : Color.muted
-            }
-
-            Text {
-              text: modelData.name
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              font.weight: Font.Bold
-              color: modelData.type === "project" ? Color.accent : Color.muted
-            }
-
-            Text {
-              visible: modelData.path !== ""
-              text: "(" + Model.shortenPath(modelData.path) + ")"
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              color: Color.muted
-              elide: Text.ElideMiddle
-              Layout.fillWidth: true
-            }
-
-            Item { visible: modelData.path === ""; Layout.fillWidth: true }
-
-            Rectangle {
-              Layout.preferredWidth: groupCountText.implicitWidth + Style.space(8)
-              Layout.preferredHeight: Style.space(18)
-              radius: Style.cornerRadius
-              color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+            RowLayout {
+              anchors.fill: parent
+              anchors.leftMargin: Style.space(8)
+              anchors.rightMargin: Style.space(8)
+              spacing: Style.space(6)
 
               Text {
-                id: groupCountText
-                anchors.centerIn: parent
-                text: modelData.ports.length + (modelData.ports.length === 1 ? " port" : " ports")
+                text: groupDelegate.isCollapsed ? "󰅂" : "󰅀"
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                color: Color.accent
+              }
+
+              Text {
+                text: modelData.type === "project" ? "󰉋" : ""
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.weight: Font.Bold
+                color: modelData.type === "project" ? Color.accent : Color.muted
+              }
+
+              Text {
+                text: modelData.name
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.weight: Font.Bold
+                color: modelData.type === "project" ? Color.accent : Color.muted
+              }
+
+              Text {
+                visible: modelData.path !== ""
+                text: "(" + Model.shortenPath(modelData.path) + ")"
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 color: Color.muted
+                elide: Text.ElideMiddle
+                Layout.fillWidth: true
               }
+
+              Item { visible: modelData.path === ""; Layout.fillWidth: true }
+
+              Rectangle {
+                Layout.preferredWidth: groupCountText.implicitWidth + Style.space(8)
+                Layout.preferredHeight: Style.space(18)
+                radius: Style.cornerRadius
+                color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+                Text {
+                  id: groupCountText
+                  anchors.centerIn: parent
+                  text: modelData.ports.length + (modelData.ports.length === 1 ? " port" : " ports")
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.caption
+                  color: Color.muted
+                }
+              }
+            }
+
+            MouseArea {
+              id: headerMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.toggleGroup(modelData.name)
+            }
+
+            PanelToolTip {
+              visible: headerMouse.containsMouse
+              text: (groupDelegate.isCollapsed ? "Click to expand " : "Click to collapse ") + modelData.name
             }
           }
 
           // Ports in this category
           Repeater {
-            model: modelData.ports
+            model: groupDelegate.isCollapsed ? [] : modelData.ports
 
             delegate: Rectangle {
               id: portRowCard
