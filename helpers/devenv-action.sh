@@ -179,8 +179,8 @@ case "$ACTION" in
   pick-project-folder)
     SELECTED=$(zenity --file-selection --directory --title="Select Dev Project Folder" 2>/dev/null || true)
     if [[ -n "$SELECTED" && -d "$SELECTED" ]]; then
-      mkdir -p "$HOME/.config/omarchy/plugins/dyeye.devenv"
-      echo "$SELECTED" > "$HOME/.config/omarchy/plugins/dyeye.devenv/pinned_project.txt"
+      mkdir -p "$HOME/.local/state/omarchy/devenv"
+      echo "$SELECTED" > "$HOME/.local/state/omarchy/devenv/pinned_project.txt"
       echo "{\"success\":true,\"action\":\"pin-project\",\"path\":\"$SELECTED\"}"
     else
       echo "{\"success\":false,\"action\":\"pick-project-folder\",\"canceled\":true}"
@@ -189,14 +189,14 @@ case "$ACTION" in
 
   pin-project)
     if [[ -n "$TARGET" && -d "$TARGET" ]]; then
-      mkdir -p "$HOME/.config/omarchy/plugins/dyeye.devenv"
-      echo "$TARGET" > "$HOME/.config/omarchy/plugins/dyeye.devenv/pinned_project.txt"
+      mkdir -p "$HOME/.local/state/omarchy/devenv"
+      echo "$TARGET" > "$HOME/.local/state/omarchy/devenv/pinned_project.txt"
       echo "{\"success\":true,\"action\":\"pin-project\",\"path\":\"$TARGET\"}"
     fi
     ;;
 
   unpin-project)
-    rm -f "$HOME/.config/omarchy/plugins/dyeye.devenv/pinned_project.txt"
+    rm -f "$HOME/.local/state/omarchy/devenv/pinned_project.txt"
     echo "{\"success\":true,\"action\":\"unpin-project\"}"
     ;;
 

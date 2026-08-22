@@ -76,7 +76,8 @@ Panel {
     }
   }
 
-  // Auto refresh timer
+  //
+   refresh timer
   Timer {
     id: scanTimer
     interval: 3000
@@ -289,7 +290,7 @@ Panel {
                   anchors.centerIn: parent
                   spacing: Style.space(4)
                   Text {
-                    text: root.project.isManual ? "󰐗" : "󰘵"
+                    text: root.project.isManual ? "󱠡" : "󰁨"
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
                     color: root.project.isManual ? Color.urgent : Color.accent
@@ -348,7 +349,7 @@ Panel {
                     RowLayout {
                       Layout.fillWidth: true
                       Text {
-                        text: "󰘵 Project Selection"
+                        text:  Project Selection"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         font.weight: Font.Bold
@@ -379,7 +380,7 @@ Panel {
                         spacing: Style.space(6)
 
                         Text {
-                          text: !root.project.isManual ? "󰄳" : "󰘵"
+                          text: !root.project.isManual ? "󱠡" : "󰁨"
                           font.family: Style.font.family
                           font.pixelSize: Style.font.caption
                           color: !root.project.isManual ? Color.accent : Color.muted

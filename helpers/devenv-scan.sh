@@ -72,7 +72,7 @@ active_project_path = ""
 active_project_name = ""
 is_manual_mode = False
 
-pinned_file = os.path.join(home, ".config/omarchy/plugins/dyeye.devenv/pinned_project.txt")
+pinned_file = os.path.join(home, ".local/state/omarchy/devenv/pinned_project.txt")
 if os.path.isfile(pinned_file):
     try:
         with open(pinned_file, "r") as pf:
