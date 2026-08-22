@@ -19,6 +19,10 @@ import sys
 import subprocess
 import json
 import re
+import select
+import time
+import fcntl
+import signal as signal_mod
 
 home = os.environ.get("HOME", "/home/dyeye")
 search_roots = [
@@ -33,21 +37,106 @@ search_roots = [
 
 # ---------------------------------------------------------------- Bounded Subprocess & String Helpers
 
-def run_cmd(cmd, cwd=None, max_bytes=65536, timeout=1.5):
-    """Executes a command with strict timeout and bounded byte capture."""
+def _terminate_proc(proc):
+    """Hard-stop a child (and its process group) then reap it."""
+    if proc is None:
+        return
     try:
-        res = subprocess.run(
+        if proc.poll() is None:
+            try:
+                os.killpg(proc.pid, signal_mod.SIGKILL)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+            try:
+                proc.wait(timeout=0.5)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    try:
+        if proc.stdout is not None:
+            proc.stdout.close()
+    except Exception:
+        pass
+
+def run_cmd(cmd, cwd=None, max_bytes=65536, timeout=1.5):
+    """Stream at most max_bytes (+1 to detect overflow); kill child on overflow; honor timeout.
+
+    Memory is bounded during capture: never buffers the full child stdout.
+    """
+    proc = None
+    try:
+        cap = max(0, int(max_bytes))
+        # Read one extra byte past the cap so we can detect overflow and kill.
+        limit = cap + 1
+        deadline = time.monotonic() + max(0.01, float(timeout))
+        proc = subprocess.Popen(
             cmd,
             cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=timeout
+            text=False,
+            start_new_session=True,
+            bufsize=0,
         )
-        if res.returncode == 0 and res.stdout:
-            return res.stdout[:max_bytes]
+        fd = proc.stdout.fileno()
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        buf = bytearray()
+
+        while len(buf) < limit:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                _terminate_proc(proc)
+                return ""
+
+            ready, _, _ = select.select([fd], [], [], min(remaining, 0.1))
+            if ready:
+                try:
+                    chunk = os.read(fd, min(8192, limit - len(buf)))
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    break
+                buf.extend(chunk)
+                continue
+
+            if proc.poll() is not None:
+                while len(buf) < limit:
+                    try:
+                        chunk = os.read(fd, min(8192, limit - len(buf)))
+                    except BlockingIOError:
+                        break
+                    if not chunk:
+                        break
+                    buf.extend(chunk)
+                break
+
+        if len(buf) >= limit:
+            _terminate_proc(proc)
+            return bytes(buf[:cap]).decode("utf-8", errors="replace")
+
+        remaining = deadline - time.monotonic()
+        try:
+            rc = proc.wait(timeout=max(0.01, remaining))
+        except subprocess.TimeoutExpired:
+            _terminate_proc(proc)
+            return ""
+
+        try:
+            if proc.stdout is not None:
+                proc.stdout.close()
+        except Exception:
+            pass
+
+        if rc == 0 and buf:
+            return bytes(buf).decode("utf-8", errors="replace")
     except Exception:
-        pass
+        _terminate_proc(proc)
     return ""
 
 def str_limit(s, max_len=128):
@@ -168,7 +257,8 @@ if not is_manual_mode:
             for p in all_pids_to_check[:10]:
                 try:
                     if os.path.exists(f"/proc/{p}/comm"):
-                        comm = open(f"/proc/{p}/comm", "r").read(64).strip().lower()
+                        with open(f"/proc/{p}/comm", "r") as cf:
+                            comm = cf.read(64).strip().lower()
                         if "tmux" in comm:
                             is_tmux = True
                             break
@@ -688,15 +778,25 @@ result = {
     }
 }
 
-# Enforce final payload size ceiling (max 196 KB) to guarantee bounded memory in shell
-payload = json.dumps(result)
-if len(payload) > 200000:
+# Enforce final payload size ceiling so QML never sees an unbounded blob.
+MAX_PAYLOAD = 200000
+payload = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
+if len(payload.encode("utf-8")) > MAX_PAYLOAD:
+    result["git"]["pullRequests"] = result["git"]["pullRequests"][:4]
+    result["git"]["issues"] = result["git"]["issues"][:4]
     result["git"]["commits"] = result["git"]["commits"][:8]
     result["git"]["stashes"] = result["git"]["stashes"][:5]
+    result["git"]["branches"] = result["git"]["branches"][:15]
     result["ports"] = result["ports"][:25]
     result["docker"]["containers"] = result["docker"]["containers"][:15]
     result["discoveredProjects"] = result["discoveredProjects"][:15]
-    payload = json.dumps(result)
+    payload = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
 
-print(payload)
+payload_bytes = payload.encode("utf-8")
+if len(payload_bytes) > MAX_PAYLOAD:
+    # Last-resort hard cut (may yield invalid JSON; QML parseScan fails closed).
+    payload_bytes = payload_bytes[:MAX_PAYLOAD]
+
+sys.stdout.buffer.write(payload_bytes)
+sys.stdout.buffer.write(b"\n")
 EOF

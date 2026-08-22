@@ -58,16 +58,32 @@ Panel {
     running: false
   }
 
-  // Scan process
+  // Scan process — empty splitMarker avoids SplitParser line buffering so the
+  // ceiling is enforced on raw chunks before any unbounded delimiter buffer grows.
+  readonly property int maxScanBytes: 262144
+
   Process {
     id: scanProc
     command: [Qt.resolvedUrl("helpers/devenv-scan.sh").toString().replace("file://", "")]
     running: false
     stdout: SplitParser {
-      onRead: function(line) {
-        // Enforce strict memory ceiling (256 KB max) to prevent unbounded accumulation
-        if (root.rawScanOutput.length < 262144) {
-          root.rawScanOutput += line + "\n"
+      splitMarker: ""
+      onRead: function(chunk) {
+        if (!chunk || chunk.length === 0)
+          return
+        // Cap before any further accumulation; SIGKILL stops the producer.
+        if (root.rawScanOutput.length >= root.maxScanBytes) {
+          if (scanProc.running)
+            scanProc.signal(9)
+          return
+        }
+        var room = root.maxScanBytes - root.rawScanOutput.length
+        if (chunk.length > room) {
+          root.rawScanOutput += chunk.substring(0, room)
+          if (scanProc.running)
+            scanProc.signal(9)
+        } else {
+          root.rawScanOutput += chunk
         }
       }
     }
