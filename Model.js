@@ -1,44 +1,136 @@
 .pragma library
 
+function _str(v, maxLen) {
+  if (v === undefined || v === null) return "";
+  var s = String(v);
+  var n = typeof maxLen === "number" ? maxLen : 256;
+  return s.length > n ? s.substring(0, n) : s;
+}
+
+function _num(v, maxAbs) {
+  if (typeof v !== "number" || !isFinite(v)) return 0;
+  var n = Math.floor(v);
+  if (typeof maxAbs === "number") {
+    if (n > maxAbs) return maxAbs;
+    if (n < -maxAbs) return -maxAbs;
+  }
+  return n;
+}
+
+function _arr(v, maxItems) {
+  if (!Array.isArray(v)) return [];
+  return v.length > maxItems ? v.slice(0, maxItems) : v;
+}
+
 function parseScan(rawOutput) {
   if (!rawOutput || rawOutput.trim() === "") {
     return defaultState();
   }
+  // Cap BEFORE JSON.parse so a runaway payload cannot inflate the parser heap.
+  var capped = rawOutput.length > 262144 ? rawOutput.substring(0, 262144) : rawOutput;
   try {
-    var data = JSON.parse(rawOutput);
+    var data = JSON.parse(capped);
     var gitData = data.git || {};
     var projData = data.project || {};
+    var dockerData = data.docker || {};
+    var containers = _arr(dockerData.containers, 30).map(function(c) {
+      c = c || {};
+      return {
+        id: _str(c.id, 32),
+        name: _str(c.name, 64),
+        image: _str(c.image, 128),
+        status: _str(c.status, 64),
+        state: _str(c.state, 32),
+        ports: _str(c.ports, 128)
+      };
+    });
     return {
       project: {
-        path: projData.path || "",
-        name: projData.name || "No Project",
-        stack: projData.stack || "generic",
+        path: _str(projData.path, 256),
+        name: _str(projData.name, 64) || "No Project",
+        stack: _str(projData.stack, 32) || "generic",
         hasCompose: projData.hasCompose === true,
         isManual: projData.isManual === true
       },
-      discoveredProjects: Array.isArray(data.discoveredProjects) ? data.discoveredProjects : [],
+      discoveredProjects: _arr(data.discoveredProjects, 25).map(function(p) {
+        p = p || {};
+        return {
+          name: _str(p.name, 64),
+          path: _str(p.path, 256),
+          stack: _str(p.stack, 32),
+          hasGit: p.hasGit === true,
+          hasCompose: p.hasCompose === true
+        };
+      }),
       git: {
         hasRepo: gitData.hasRepo === true,
-        repoPath: gitData.repoPath || "",
-        repoName: gitData.repoName || "",
-        branch: gitData.branch || "",
-        branches: Array.isArray(gitData.branches) ? gitData.branches : [],
-        lastCommit: gitData.lastCommit || "",
-        commits: Array.isArray(gitData.commits) ? gitData.commits : [],
-        stashes: Array.isArray(gitData.stashes) ? gitData.stashes : [],
-        dirty: typeof gitData.dirty === "number" ? gitData.dirty : 0,
-        staged: typeof gitData.staged === "number" ? gitData.staged : 0,
-        untracked: typeof gitData.untracked === "number" ? gitData.untracked : 0,
-        ahead: typeof gitData.ahead === "number" ? gitData.ahead : 0,
-        behind: typeof gitData.behind === "number" ? gitData.behind : 0,
-        remoteUrl: gitData.remoteUrl || "",
+        repoPath: _str(gitData.repoPath, 256),
+        repoName: _str(gitData.repoName, 64),
+        branch: _str(gitData.branch, 64),
+        branches: _arr(gitData.branches, 30).map(function(b) { return _str(b, 100); }),
+        lastCommit: _str(gitData.lastCommit, 256),
+        commits: _arr(gitData.commits, 15).map(function(c) {
+          c = c || {};
+          return {
+            hash: _str(c.hash, 16),
+            fullHash: _str(c.fullHash, 64),
+            author: _str(c.author, 64),
+            date: _str(c.date, 32),
+            message: _str(c.message, 256)
+          };
+        }),
+        stashes: _arr(gitData.stashes, 10).map(function(s) {
+          s = s || {};
+          return {
+            index: _num(s.index, 999),
+            date: _str(s.date, 32),
+            message: _str(s.message, 256)
+          };
+        }),
+        dirty: _num(gitData.dirty, 99999),
+        staged: _num(gitData.staged, 99999),
+        untracked: _num(gitData.untracked, 99999),
+        ahead: _num(gitData.ahead, 999),
+        behind: _num(gitData.behind, 999),
+        remoteUrl: _str(gitData.remoteUrl, 256),
         isGitHub: gitData.isGitHub === true,
-        githubRepo: gitData.githubRepo || "",
-        pullRequests: Array.isArray(gitData.pullRequests) ? gitData.pullRequests : [],
-        issues: Array.isArray(gitData.issues) ? gitData.issues : []
+        githubRepo: _str(gitData.githubRepo, 128),
+        pullRequests: _arr(gitData.pullRequests, 8).map(function(pr) {
+          pr = pr || {};
+          return {
+            number: _num(pr.number, 999999),
+            title: _str(pr.title, 256),
+            author: _str(pr.author, 64),
+            url: _str(pr.url, 256),
+            headRefName: _str(pr.headRefName, 100)
+          };
+        }),
+        issues: _arr(gitData.issues, 8).map(function(iss) {
+          iss = iss || {};
+          return {
+            number: _num(iss.number, 999999),
+            title: _str(iss.title, 256),
+            author: _str(iss.author, 64),
+            url: _str(iss.url, 256)
+          };
+        })
       },
-      ports: Array.isArray(data.ports) ? data.ports : [],
-      docker: data.docker || { available: false, containers: [] }
+      ports: _arr(data.ports, 50).map(function(p) {
+        p = p || {};
+        return {
+          port: _num(p.port, 65535),
+          ip: _str(p.ip, 48),
+          process: _str(p.process, 64),
+          pid: _num(p.pid, 4194304),
+          categoryType: _str(p.categoryType, 16) || "process",
+          categoryName: _str(p.categoryName, 64),
+          categoryPath: _str(p.categoryPath, 256)
+        };
+      }),
+      docker: {
+        available: dockerData.available === true,
+        containers: containers
+      }
     };
   } catch (e) {
     console.warn("DevEnv: Failed to parse scan output:", e);

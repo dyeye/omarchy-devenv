@@ -58,21 +58,43 @@ case "$ACTION" in
 
   docker-logs)
     if [[ -n "$TARGET" ]]; then
-      docker logs --tail 40 "$TARGET" 2>&1 || echo "No logs found for $TARGET"
+      # Bound producer bytes before QML; ignore SIGPIPE from head closing early.
+      set +o pipefail
+      logs="$(docker logs --tail 40 "$TARGET" 2>&1 | head -c 131072 || true)"
+      set -o pipefail
+      if [[ -n "$logs" ]]; then
+        printf '%s\n' "$logs"
+      else
+        echo "No logs found for $TARGET"
+      fi
     fi
     ;;
 
   compose-up)
     DIR="${TARGET:-$HOME}"
     if [[ -d "$DIR" ]]; then
-      (cd "$DIR" && docker compose up -d 2>&1) || echo "Failed to run docker compose up"
+      set +o pipefail
+      out="$(cd "$DIR" && docker compose up -d 2>&1 | head -c 8192 || true)"
+      set -o pipefail
+      if [[ -z "$out" ]]; then
+        echo "Failed to run docker compose up"
+      else
+        printf '%s\n' "$out"
+      fi
     fi
     ;;
 
   compose-down)
     DIR="${TARGET:-$HOME}"
     if [[ -d "$DIR" ]]; then
-      (cd "$DIR" && docker compose down 2>&1) || echo "Failed to run docker compose down"
+      set +o pipefail
+      out="$(cd "$DIR" && docker compose down 2>&1 | head -c 8192 || true)"
+      set -o pipefail
+      if [[ -z "$out" ]]; then
+        echo "Failed to run docker compose down"
+      else
+        printf '%s\n' "$out"
+      fi
     fi
     ;;
 

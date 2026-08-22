@@ -25,16 +25,30 @@ Item {
     Quickshell.execDetached(["bash", "-c", "printf %s \"$1\" | wl-copy", "_", String(text)])
   }
 
-  // Process to fetch logs
+  // Process to fetch logs — empty splitMarker caps before line-buffer growth.
+  readonly property int maxLogBytes: 131072
+
   Process {
     id: logProc
     command: [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "docker-logs", root.activeLogContainer]
     running: false
     stdout: SplitParser {
-      onRead: function(line) {
-        // Enforce strict memory ceiling (128 KB max) on container log collection
-        if (root.logOutputText.length < 131072) {
-          root.logOutputText += line + "\n"
+      splitMarker: ""
+      onRead: function(chunk) {
+        if (!chunk || chunk.length === 0)
+          return
+        if (root.logOutputText.length >= root.maxLogBytes) {
+          if (logProc.running)
+            logProc.signal(9)
+          return
+        }
+        var room = root.maxLogBytes - root.logOutputText.length
+        if (chunk.length > room) {
+          root.logOutputText += chunk.substring(0, room)
+          if (logProc.running)
+            logProc.signal(9)
+        } else {
+          root.logOutputText += chunk
         }
       }
     }
