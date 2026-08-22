@@ -2,136 +2,138 @@
 
 > Local development mission control for **Omarchy / Hyprland**, built with **Quickshell (QML & JavaScript)**.
 
-Omarchy DevEnv consolidates port management, Docker containers, Git repository health, and an offline developer toolbox into a single native status bar widget and popout panel.
+Omarchy DevEnv consolidates real-time port inspection, Docker container lifecycle controls, Git repository & GitHub radar, and an offline developer toolbox into a native status bar widget and popout panel.
 
 ---
 
-## 󰈚 Overview & Walkthrough
+## 󰈚 Architecture & Workflow
 
-Omarchy DevEnv eliminates context switching and resolves daily development friction on Arch Linux.
+Omarchy DevEnv is engineered for low latency and zero context switching:
 
-![DevEnv Hero Preview](https://raw.githubusercontent.com/dyeye/omarchy-devenv/main/assets/screenshots/hero-preview.png)
+1. **Sub-50ms System Scanning (`devenv-scan.sh`):** Scans active Hyprland window focus, listening TCP ports (`ss`), local Docker daemon state (`docker ps`), active Git repository status (`git log`, `git status`, `git branch`, `git stash`), and GitHub CLI data (`gh pr list`, `gh issue list`).
+2. **Reactive UI State (`Model.js`):** Parses raw outputs into structured reactive JavaScript models consumed by Qt Quick / Quickshell delegates.
+3. **Safe Async Action Dispatcher (`devenv-action.sh`):** Executes port termination, Docker lifecycle, git checkout, and browser URLs in the background without blocking the UI thread.
+4. **Native Omarchy Bar Integration:** Implements the official `bar-widget` popout coordinator contract, supporting sequential panel navigation (`Super + Ctrl + <number>`) and `Tab` / `Shift+Tab` switching.
 
 ---
 
-## 󱥸 Core Features
+## 󱥸 Core Modules
 
-### 1. 󰒋 Dev Ports & Server Pilot
-Never get stuck on `EADDRINUSE: 3000` or wonder what is holding a port again.
+### 1. 󰒋 Ports & Server Pilot
+Detect and manage local development servers and listening sockets.
 
-![Ports Tab Preview](https://raw.githubusercontent.com/dyeye/omarchy-devenv/main/assets/screenshots/ports-tab.png)
-
-* **Live Detection:** Real-time scanning of all listening local TCP sockets (`127.0.0.1`, `0.0.0.0`, `::1`).
-* **Process Attribution:** Identifies the binary (`node`, `vite`, `python`, `cargo`, `docker-proxy`, etc.) and PID.
+* **Live TCP Port Discovery:** Detects all active listening TCP ports on `127.0.0.1`, `0.0.0.0`, and `::1`.
+* **Process Attribution:** Identifies binary names (`node`, `vite`, `python`, `cargo`, `docker-proxy`, etc.) and system PIDs.
 * **󰐊 Open in Browser:** 1-click launch of `http://localhost:<port>` in your default browser.
-* **󰆏 Copy URL:** Instant clipboard copy (`wl-copy`).
-* **󰅖 Kill Process:** Instant `SIGTERM` / `SIGKILL` by PID or port number to immediately free stuck sockets.
+* **󰆏 Copy URL:** Instant clipboard copy with rich hover tooltips.
+* **󰅖 Process Terminator:** Safe `SIGTERM` / `SIGKILL` by PID to instantly release stuck sockets.
 
 ---
 
-### 2.  Docker & Container Management
-Inspect and control local containers and database dependencies without opening a terminal.
+### 2.  Docker & Compose Manager
+Monitor and control local containers and database dependencies without opening a terminal.
 
-![Docker Tab Preview](https://raw.githubusercontent.com/dyeye/omarchy-devenv/main/assets/screenshots/docker-tab.png)
-
-* **Container Overview:** Visual state indicators (󰄳 Running, 󰑐 Restarting, 󰅖 Exited).
-* **Container Lifecycle:** Direct **Start**, **Stop**, and **Restart** actions per container.
-* **Quick Compose:** Automatically detects `docker-compose.yml` in the active project directory with 1-click **Compose Up** and **Down** buttons.
-* **󰈙 Embedded Logs Viewer:** Inspect the last 40 lines of container output and stack traces in-panel.
+* **Container Health Indicators:** Real-time state badges (󰄳 Running, 󰑐 Restarting, 󰅖 Exited).
+* **Safe Confirmation Popups:** Interactive Yes / No confirmation dialogs before Stop, Restart, and Compose Down actions to prevent accidental downtime.
+* **Quick Compose Pilot:** Automatically detects `docker-compose.yml` in the active project directory with 1-click **Compose Up** and **Down**.
+* **󰈙 Embedded Logs Viewer:** Expandable drawer to inspect recent container stdout/stderr logs and stack traces.
 
 ---
 
-### 3.  Git Radar & Workspace Context
-Stay on top of uncommitted work and remote synchronization across all your projects.
+### 3.  Git Radar & GitHub Hub
+Comprehensive repository tracking, multi-branch switching, and GitHub integration.
 
-![Git Tab Preview](https://raw.githubusercontent.com/dyeye/omarchy-devenv/main/assets/screenshots/git-tab.png)
-
-* **Smart Context Tracking:** Automatically detects your active repository based on the focused terminal or editor in Hyprland.
-* **Branch & Commit Metadata:** Displays the current branch name, last commit summary, and upstream status (󰁝 ahead / 󰁅 behind).
-* **Work Tracker:** Live counters for staged (`+X`), modified (`~Y`), and untracked (`?Z`) files.
+* **Active Workspace Tracking:** Automatically detects Git repositories based on the focused terminal or editor in Hyprland.
+* **󰊢 Interactive Branch Switcher:** Active branch pill (`󰊢 <branch> 󰅂`) with an anchored dropdown listing all local and remote tracking branches, executing automated `git checkout` on click.
+* **󰜘 Commit History:** Recent commits with short SHA badge (1-click clipboard copy), author, relative date, and hover marquee scrolling for long messages.
+* ** GitHub Pull Requests:** Lists open PRs (`#<number> <title>`) with author info, target branches, 1-click browser launchers, and "Create PR" shortcut.
+* ** GitHub Issues:** Displays open repository issues with author details, direct browser links, and "Create Issue" shortcut.
+* **󰅖 Git Stashes Manager:** View saved stashes with 1-click `Pop` action (`git stash pop`).
+* **󱁤 Smart Hover Marquee:** Long commit messages, PR titles, and issue titles remain neatly truncated (`...`) in rest state and scroll smoothly on hover.
 * **Quick Launchers:**
-  * 󰘐 **Lazygit:** Launches `lazygit` in a floating window inside the project directory.
-  *  **Terminal:** Launches your configured terminal (`foot`, `kitty`, `ghostty`, `alacritty`).
-  * 󰈙 **Editor:** Opens the project in `$EDITOR` (`code`, `cursor`, `nvim`).
+  *  **GitHub Web:** Opens the remote repository in the browser.
+  * 󰘐 **Lazygit:** Launches `lazygit` in a floating terminal within the repo.
+  *  **Terminal:** Opens your default terminal (`ghostty`, `kitty`, `foot`, `alacritty`).
+  * 󰈙 **Editor:** Opens the project in your configured code editor.
+  * 󰑐 **Fetch:** Fetches upstream remote updates.
 
 ---
 
 ### 4. 󰞋 Offline Developer Toolbox
-Essential developer utilities available in milliseconds without third-party web tools.
+Essential utilities that work offline without third-party web converters.
 
-![Toolbox Tab Preview](https://raw.githubusercontent.com/dyeye/omarchy-devenv/main/assets/screenshots/toolbox-tab.png)
-
-* **`{ }` JSON Formatter & Minifier:** Clean formatting with 2-space indentation and validation error reporting.
-* **󱁤 Timestamp Converter:** Bidirectional conversion between UNIX Epoch (seconds/milliseconds) and formatted ISO / local dates.
+* **`{ }` JSON Formatter & Minifier:** Format with clean indentation or minify into single-line strings with live syntax error reporting.
+* **󱁤 Timestamp Converter:** Bidirectional conversion between UNIX Epoch timestamps (seconds / milliseconds) and formatted ISO / local dates.
 * **󰮔 Base64 & URL:** Offline UTF-8 string encoding and decoding.
 * **󰌠 UUID v4 Generator:** Instant cryptographic UUID generation with 1-click clipboard copy.
 
 ---
 
-## 󰋜 Bar Widget Integration
+### 5. 󰋜 Omarchy Bar Widget & Keyboard Shortcuts
 
-The status bar widget provides a compact, ambient readout:
-
-![Bar Widget Preview](https://raw.githubusercontent.com/dyeye/omarchy-devenv/main/assets/screenshots/bar-widget.png)
-
-* **Active Project & Port Count:** `󱁐 󰒋3`
-* **Interaction:**
-  * **Left Click:** Toggles the main DevEnv popout panel.
-  * **Right Click:** Forces an immediate background scan of ports, Docker, and Git.
+* **Ambient Bar Readout:** Displays active project name and open port counter (`󱁐 󰒋3`).
+* **Mouse Controls:**
+  * **Left Click:** Toggles the DevEnv panel anchored to the widget icon.
+  * **Right Click:** Forces an immediate background scan and refresh.
+* **Keyboard Navigation:**
+  * **`Super + Ctrl + <number>`:** Directly opens or switches to DevEnv based on its position in the bar.
+  * **`Tab` / `Shift+Tab`:** Cycles forward and backward to adjacent Omarchy bar panels.
+  * **`Escape`:** Dismisses the panel.
 
 ---
 
-## 󰌌 Installation & Setup
+## 󰌌 Installation & Configuration
 
 ### Prerequisites
 * Omarchy Linux with Quickshell
 * Hyprland compositor
-* Optional tools: `docker`, `git`, `lazygit`, `ss`, `jq`
+* Optional tools: `docker`, `git`, `gh` (GitHub CLI), `lazygit`, `ss`, `jq`
 
-### Install Plugin
-Clone into your user plugin directory:
+### 1. Install Plugin
+Clone the repository into your Omarchy user plugins directory:
 
 ```bash
-mkdir -p ~/.config/omarchy/plugins
 git clone https://github.com/dyeye/omarchy-devenv.git ~/.config/omarchy/plugins/dyeye.devenv
 ```
 
-### Place in Omarchy Bar
-Add the widget to your status bar layout:
+### 2. Add to Omarchy Bar
+Place the widget in your bar configuration:
 
 ```bash
 omarchy bar put dyeye.devenv --before omarchy.agents
 ```
 
-### Hyprland Keybinding (Optional)
-Add a shortcut in `~/.config/hypr/bindings.lua` to toggle the panel:
+Or manually add `dyeye.devenv` into `~/.config/omarchy/shell.json` inside the `bar.layout.right` section.
+
+### 3. Custom Hyprland Keybinding (Optional)
+To bind a direct dedicated key combination (e.g. `Super + D`), edit `~/.config/hypr/bindings.lua`:
 
 ```lua
-o.bind("$mainMod, D, exec, omarchy-shell shell toggle dyeye.devenv")
+o.bind("SUPER + D", "DevEnv Panel", "omarchy-shell -q shell toggle dyeye.devenv")
 ```
 
 ---
 
-## 󰉋 Project Structure
+## 󰉋 Project File Hierarchy
 
 ```text
 ~/.config/omarchy/plugins/dyeye.devenv/
-├── manifest.json              # Omarchy Quattro plugin contract
-├── BarWidget.qml              # Status bar pill component
-├── Panel.qml                  # Main popout panel host
-├── Model.js                   # State parsers and dev utilities
+├── manifest.json              # Omarchy bar-widget plugin contract
+├── BarWidget.qml              # Status bar pill component & popout host
+├── Panel.qml                  # Main popout panel window & key navigation
+├── Model.js                   # State parsers, dev toolbox math & path utilities
 ├── tabs/
-│   ├── PortsTab.qml           # Port scanner and process killer
-│   ├── DockerTab.qml          # Container controls and logs viewer
-│   ├── GitTab.qml             # Git radar and quick launchers
-│   └── ToolboxTab.qml         # Offline JSON, Base64, Time, UUID tools
+│   ├── PortsTab.qml           # TCP port scanner & process terminator
+│   ├── DockerTab.qml          # Containers list, safe popups & logs drawer
+│   ├── GitTab.qml             # Git radar, branch switcher, GitHub PRs/Issues & stashes
+│   └── ToolboxTab.qml         # Offline JSON, Base64, Time & UUID tools
 └── helpers/
-    ├── devenv-scan.sh         # Sub-50ms system scanner
-    └── devenv-action.sh       # Process, Docker, and browser runner
+    ├── devenv-scan.sh         # Background scanner for ports, docker, git & gh
+    └── devenv-action.sh       # Async runner for docker, git, processes & browser
 ```
 
 ---
 
 ## 󰈚 License
 
-MIT License. Developed for Omarchy Linux.
+MIT License. Designed and crafted for Omarchy Linux.
