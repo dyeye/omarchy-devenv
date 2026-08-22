@@ -67,35 +67,49 @@ def project_from_filepath(fpath):
         pass
     return None, None
 
-# 1. Determine active project from active window
+# 1. Determine active project from pinned file or active window
 active_project_path = ""
 active_project_name = ""
+is_manual_mode = False
 
-try:
-    hypr_raw = subprocess.check_output(["hyprctl", "activewindow", "-j"], text=True, stderr=subprocess.DEVNULL)
-    win = json.loads(hypr_raw)
-except Exception:
-    win = {}
+pinned_file = os.path.join(home, ".config/omarchy/plugins/dyeye.devenv/pinned_project.txt")
+if os.path.isfile(pinned_file):
+    try:
+        with open(pinned_file, "r") as pf:
+            pcontent = pf.read().strip()
+            if pcontent and os.path.isdir(pcontent):
+                active_project_path = os.path.realpath(pcontent)
+                active_project_name = os.path.basename(active_project_path)
+                is_manual_mode = True
+    except Exception:
+        pass
 
-win_title = win.get("title", "")
-win_pid = win.get("pid", 0)
-win_class = win.get("class", "").lower()
+if not is_manual_mode:
+    try:
+        hypr_raw = subprocess.check_output(["hyprctl", "activewindow", "-j"], text=True, stderr=subprocess.DEVNULL)
+        win = json.loads(hypr_raw)
+    except Exception:
+        win = {}
 
-# Check if active window is a terminal or editor
-is_terminal_window = any(t in win_class for t in ["foot", "kitty", "alacritty", "ghostty", "wezterm", "terminal", "tmux"]) or "herdr" in win_class
+    win_title = win.get("title", "")
+    win_pid = win.get("pid", 0)
+    win_class = win.get("class", "").lower()
 
-# 1a. For GUI Editors & Apps: Check window title FIRST (e.g. Zed "dyeye.devenv — Panel.qml", VSCode "file - project - Code")
-if not is_terminal_window and win_title:
-    title_parts = re.split(r"[\s—\-\|:]+", win_title)
-    for part in title_parts:
-        part = part.strip()
-        if not part or part.lower() in {"zed", "visual", "studio", "code", "obsidian", "nvim", "neovim", "panel.qml"}:
-            continue
-        resolved = resolve_project_dir(part)
-        if resolved:
-            active_project_path = resolved
-            active_project_name = os.path.basename(resolved)
-            break
+    # Check if active window is a terminal or editor
+    is_terminal_window = any(t in win_class for t in ["foot", "kitty", "alacritty", "ghostty", "wezterm", "terminal", "tmux"]) or "herdr" in win_class
+
+    # 1a. For GUI Editors & Apps: Check window title FIRST (e.g. Zed "dyeye.devenv — Panel.qml", VSCode "file - project - Code")
+    if not is_terminal_window and win_title:
+        title_parts = re.split(r"[\s—\-\|:]+", win_title)
+        for part in title_parts:
+            part = part.strip()
+            if not part or part.lower() in {"zed", "visual", "studio", "code", "obsidian", "nvim", "neovim", "panel.qml"}:
+                continue
+            resolved = resolve_project_dir(part)
+            if resolved:
+                active_project_path = resolved
+                active_project_name = os.path.basename(resolved)
+                break
 
 # Helper to find all child/descendant PIDs of a process
 def get_descendant_pids(root_pid):
@@ -557,14 +571,75 @@ try:
 except Exception:
     pass
 
-# 6. Output final consolidated JSON
+# 6. Scan Discovered Projects across search roots
+discovered_projects = []
+seen_pdirs = set()
+
+def scan_project_meta(pdir):
+    if not pdir or not os.path.isdir(pdir):
+        return None
+    real_p = os.path.realpath(pdir)
+    if real_p in seen_pdirs or real_p == home or real_p == "/":
+        return None
+    seen_pdirs.add(real_p)
+
+    pname = os.path.basename(real_p)
+    has_git = os.path.isdir(os.path.join(real_p, ".git"))
+    has_comp = any(os.path.isfile(os.path.join(real_p, f)) for f in ["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"])
+    
+    pstack = "generic"
+    if os.path.isfile(os.path.join(real_p, "package.json")):
+        pstack = "node"
+    elif os.path.isfile(os.path.join(real_p, "Cargo.toml")):
+        pstack = "rust"
+    elif any(os.path.isfile(os.path.join(real_p, f)) for f in ["pyproject.toml", "requirements.txt", "Pipfile", "manage.py", "setup.py"]):
+        pstack = "python"
+    elif os.path.isfile(os.path.join(real_p, "go.mod")):
+        pstack = "go"
+    elif os.path.isfile(os.path.join(real_p, "manifest.json")):
+        pstack = "qml"
+    elif os.path.isfile(os.path.join(real_p, "pom.xml")) or os.path.isfile(os.path.join(real_p, "build.gradle")):
+        pstack = "java"
+    elif os.path.isfile(os.path.join(real_p, "composer.json")):
+        pstack = "php"
+
+    return {
+        "name": pname,
+        "path": real_p,
+        "stack": pstack,
+        "hasGit": has_git,
+        "hasCompose": has_comp
+    }
+
+for sroot in search_roots:
+    if os.path.isdir(sroot):
+        try:
+            for entry in os.listdir(sroot):
+                cand = os.path.join(sroot, entry)
+                if os.path.isdir(cand) and not entry.startswith(".") and entry != "node_modules":
+                    meta = scan_project_meta(cand)
+                    if meta:
+                        discovered_projects.append(meta)
+        except Exception:
+            pass
+
+if active_project_path:
+    meta = scan_project_meta(active_project_path)
+    if meta:
+        discovered_projects.append(meta)
+
+discovered_projects.sort(key=lambda x: x["name"].lower())
+
+# 7. Output final consolidated JSON
 result = {
     "project": {
         "path": active_project_path,
         "name": active_project_name,
         "stack": stack_type,
-        "hasCompose": has_compose
+        "hasCompose": has_compose,
+        "isManual": is_manual_mode
     },
+    "discoveredProjects": discovered_projects,
     "git": {
         "hasRepo": git_has_repo,
         "repoPath": git_repo_path,

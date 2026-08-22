@@ -22,7 +22,8 @@ Panel {
   property var dataModel: Model.defaultState()
   property string rawScanOutput: ""
 
-  readonly property var project: dataModel.project || { path: "", name: "No Project", stack: "generic", hasCompose: false }
+  readonly property var project: dataModel.project || { path: "", name: "No Project", stack: "generic", hasCompose: false, isManual: false }
+  readonly property var discoveredProjects: dataModel.discoveredProjects || []
   readonly property var git: dataModel.git || { hasRepo: false, branch: "", lastCommit: "", dirty: 0, staged: 0, untracked: 0, ahead: 0, behind: 0 }
   readonly property var ports: dataModel.ports || []
   readonly property var docker: dataModel.docker || { available: false, containers: [] }
@@ -144,12 +145,12 @@ Panel {
               // Project Title and Path
               ColumnLayout {
                 spacing: 0
-                Layout.preferredWidth: Style.space(210)
+                Layout.preferredWidth: Style.space(160)
 
                 // Marquee Title Container (Static elide, Marquee on Hover)
                 Item {
                   id: titleMarqueeBox
-                  Layout.preferredWidth: Style.space(210)
+                  Layout.preferredWidth: Style.space(160)
                   Layout.preferredHeight: Style.space(18)
                   clip: true
 
@@ -212,7 +213,7 @@ Panel {
                 // Marquee Path Container (Static elide, Marquee on Hover)
                 Item {
                   id: marqueeBox
-                  Layout.preferredWidth: Style.space(210)
+                  Layout.preferredWidth: Style.space(160)
                   Layout.preferredHeight: Style.space(16)
                   clip: true
 
@@ -269,6 +270,279 @@ Panel {
                   PanelToolTip {
                     visible: pathHover.containsMouse
                     text: root.project.path
+                  }
+                }
+              }
+
+              // Project Switcher / Pinning Pill
+              Rectangle {
+                id: projectPill
+                Layout.preferredWidth: projectPillRow.implicitWidth + Style.space(12)
+                Layout.preferredHeight: Style.space(22)
+                radius: Style.cornerRadius
+                color: projPillMouse.containsMouse ? (root.project.isManual ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.25) : Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.25)) : (root.project.isManual ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.12) : Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.12))
+                border.color: projPillMouse.containsMouse ? (root.project.isManual ? Color.urgent : Color.accent) : (root.project.isManual ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.3) : Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.3))
+                border.width: 1
+
+                RowLayout {
+                  id: projectPillRow
+                  anchors.centerIn: parent
+                  spacing: Style.space(4)
+                  Text {
+                    text: root.project.isManual ? "󰐗" : "󰘵"
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: root.project.isManual ? Color.urgent : Color.accent
+                  }
+                  Text {
+                    text: root.project.isManual ? "Manual" : "Auto"
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    font.weight: Font.Bold
+                    color: root.project.isManual ? Color.urgent : Color.accent
+                  }
+                  Text {
+                    text: "󰅂"
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: root.project.isManual ? Color.urgent : Color.accent
+                  }
+                }
+
+                MouseArea {
+                  id: projPillMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: projectPopup.open()
+                }
+
+                PanelToolTip {
+                  visible: projPillMouse.containsMouse && !projectPopup.visible
+                  text: root.project.isManual
+                    ? "Manual mode: Pinned to " + root.project.name + "\nClick to switch project or enable auto-detection"
+                    : "Auto-detect: Tracking focused window\nClick to pin a project or browse folder"
+                }
+
+                // Project Selector Popup Menu
+                Popup {
+                  id: projectPopup
+                  x: 0
+                  y: parent.height + Style.space(4)
+                  width: Style.space(250)
+                  height: Math.min(Style.space(290), Style.space(130) + (root.discoveredProjects.length * Style.space(34)))
+                  padding: Style.space(8)
+                  closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+
+                  background: Rectangle {
+                    radius: Style.cornerRadius
+                    color: Color.background
+                    border.color: Color.accent
+                    border.width: 1
+                  }
+
+                  contentItem: ColumnLayout {
+                    spacing: Style.space(6)
+
+                    // Header title
+                    RowLayout {
+                      Layout.fillWidth: true
+                      Text {
+                        text: "󰘵 Project Selection"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.caption
+                        font.weight: Font.Bold
+                        color: Color.foreground
+                      }
+                      Item { Layout.fillWidth: true }
+                      Text {
+                        text: root.project.isManual ? "Pinned" : "Auto"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.caption
+                        color: root.project.isManual ? Color.urgent : Color.accent
+                      }
+                    }
+
+                    // 1. Auto-detect Mode Button
+                    Rectangle {
+                      Layout.fillWidth: true
+                      Layout.preferredHeight: Style.space(26)
+                      radius: Style.cornerRadius - 2
+                      color: autoBtnMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.22) : (!root.project.isManual ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.12) : "transparent")
+                      border.color: !root.project.isManual ? Color.accent : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+                      border.width: 1
+
+                      RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: Style.space(6)
+                        anchors.rightMargin: Style.space(6)
+                        spacing: Style.space(6)
+
+                        Text {
+                          text: !root.project.isManual ? "󰄳" : "󰘵"
+                          font.family: Style.font.family
+                          font.pixelSize: Style.font.caption
+                          color: !root.project.isManual ? Color.accent : Color.muted
+                        }
+                        Text {
+                          text: "Auto-detect (Focused Window)"
+                          font.family: Style.font.family
+                          font.pixelSize: Style.font.caption
+                          font.weight: !root.project.isManual ? Font.Bold : Font.Normal
+                          color: !root.project.isManual ? Color.accent : Color.foreground
+                          Layout.fillWidth: true
+                          elide: Text.ElideRight
+                        }
+                      }
+
+                      MouseArea {
+                        id: autoBtnMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                          projectPopup.close()
+                          actionProc.command = [Qt.resolvedUrl("helpers/devenv-action.sh").toString().replace("file://", ""), "unpin-project"]
+                          actionProc.running = true
+                          Qt.callLater(root.refresh)
+                        }
+                      }
+                    }
+
+                    // 2. Browse Folder Button (Explorer)
+                    Rectangle {
+                      Layout.fillWidth: true
+                      Layout.preferredHeight: Style.space(26)
+                      radius: Style.cornerRadius - 2
+                      color: browseBtnMouse.containsMouse ? Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15) : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.06)
+                      border.color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
+                      border.width: 1
+
+                      RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: Style.space(6)
+                        anchors.rightMargin: Style.space(6)
+                        spacing: Style.space(6)
+
+                        Text {
+                          text: "󰉋"
+                          font.family: Style.font.family
+                          font.pixelSize: Style.font.caption
+                          color: Color.accent
+                        }
+                        Text {
+                          text: "Browse Folder (File Dialog)..."
+                          font.family: Style.font.family
+                          font.pixelSize: Style.font.caption
+                          color: Color.foreground
+                          Layout.fillWidth: true
+                          elide: Text.ElideRight
+                        }
+                      }
+
+                      MouseArea {
+                        id: browseBtnMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                          projectPopup.close()
+                          actionProc.command = [Qt.resolvedUrl("helpers/devenv-action.sh").toString().replace("file://", ""), "pick-project-folder"]
+                          actionProc.running = true
+                          Qt.callLater(root.refresh)
+                        }
+                      }
+                    }
+
+                    // Divider
+                    Rectangle {
+                      Layout.fillWidth: true
+                      Layout.preferredHeight: 1
+                      color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.1)
+                    }
+
+                    Text {
+                      text: "Known Projects (" + root.discoveredProjects.length + ")"
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.caption
+                      color: Color.muted
+                    }
+
+                    // Discovered Projects ListView
+                    ListView {
+                      id: projListView
+                      Layout.fillWidth: true
+                      Layout.fillHeight: true
+                      clip: true
+                      spacing: Style.space(3)
+                      model: root.discoveredProjects
+
+                      delegate: Rectangle {
+                        width: projListView.width
+                        height: Style.space(32)
+                        radius: Style.cornerRadius - 2
+                        color: pItemMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.2) : (modelData.path === root.project.path ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.1) : "transparent")
+
+                        RowLayout {
+                          anchors.fill: parent
+                          anchors.leftMargin: Style.space(6)
+                          anchors.rightMargin: Style.space(6)
+                          spacing: Style.space(6)
+
+                          Text {
+                            text: Model.getStackIcon(modelData.stack)
+                            font.family: Style.font.family
+                            font.pixelSize: Style.font.caption
+                            color: Color.accent
+                          }
+
+                          ColumnLayout {
+                            spacing: 0
+                            Layout.fillWidth: true
+
+                            Text {
+                              text: modelData.name
+                              font.family: Style.font.family
+                              font.pixelSize: Style.font.caption
+                              font.weight: modelData.path === root.project.path ? Font.Bold : Font.Normal
+                              color: modelData.path === root.project.path ? Color.accent : Color.foreground
+                              elide: Text.ElideRight
+                              Layout.fillWidth: true
+                            }
+
+                            Text {
+                              text: Model.shortenPath(modelData.path)
+                              font.family: Style.font.family
+                              font.pixelSize: Style.font.caption
+                              color: Color.muted
+                              elide: Text.ElideMiddle
+                              Layout.fillWidth: true
+                            }
+                          }
+
+                          Text {
+                            visible: modelData.path === root.project.path
+                            text: "󰄳"
+                            font.family: Style.font.family
+                            font.pixelSize: Style.font.caption
+                            color: Color.accent
+                          }
+                        }
+
+                        MouseArea {
+                          id: pItemMouse
+                          anchors.fill: parent
+                          hoverEnabled: true
+                          cursorShape: Qt.PointingHandCursor
+                          onClicked: {
+                            projectPopup.close()
+                            actionProc.command = [Qt.resolvedUrl("helpers/devenv-action.sh").toString().replace("file://", ""), "pin-project", modelData.path]
+                            actionProc.running = true
+                            Qt.callLater(root.refresh)
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }

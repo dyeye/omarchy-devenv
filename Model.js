@@ -7,8 +7,16 @@ function parseScan(rawOutput) {
   try {
     var data = JSON.parse(rawOutput);
     var gitData = data.git || {};
+    var projData = data.project || {};
     return {
-      project: data.project || { path: "", name: "No Project", stack: "generic", hasCompose: false },
+      project: {
+        path: projData.path || "",
+        name: projData.name || "No Project",
+        stack: projData.stack || "generic",
+        hasCompose: projData.hasCompose === true,
+        isManual: projData.isManual === true
+      },
+      discoveredProjects: Array.isArray(data.discoveredProjects) ? data.discoveredProjects : [],
       git: {
         hasRepo: gitData.hasRepo === true,
         repoPath: gitData.repoPath || "",
@@ -40,7 +48,8 @@ function parseScan(rawOutput) {
 
 function defaultState() {
   return {
-    project: { path: "", name: "No Project", stack: "generic", hasCompose: false },
+    project: { path: "", name: "No Project", stack: "generic", hasCompose: false, isManual: false },
+    discoveredProjects: [],
     git: {
       hasRepo: false,
       repoPath: "",
