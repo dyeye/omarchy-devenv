@@ -402,6 +402,7 @@ Item {
               Text { text: "Unix Timestamp (Seconds):"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.muted }
               Text {
                 text: String(Math.floor(timeDashboard.now.getTime() / 1000))
+                textFormat: Text.PlainText
                 font.family: "Monospace"
                 font.pixelSize: Style.font.body
                 font.weight: Font.Bold
@@ -444,6 +445,7 @@ Item {
               Text { text: "Unix Timestamp (Milliseconds):"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.muted }
               Text {
                 text: String(timeDashboard.now.getTime())
+                textFormat: Text.PlainText
                 font.family: "Monospace"
                 font.pixelSize: Style.font.bodySmall
                 font.weight: Font.Bold
@@ -486,6 +488,7 @@ Item {
               Text { text: "UTC (ISO 8601):"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.muted }
               Text {
                 text: timeDashboard.now.toISOString().replace("T", " ").replace("Z", " UTC")
+                textFormat: Text.PlainText
                 font.family: "Monospace"
                 font.pixelSize: Style.font.bodySmall
                 font.weight: Font.DemiBold
@@ -528,6 +531,7 @@ Item {
               Text { text: "Local Time:"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.muted }
               Text {
                 text: timeDashboard.now.toLocaleString()
+                textFormat: Text.PlainText
                 font.family: "Monospace"
                 font.pixelSize: Style.font.bodySmall
                 color: Color.foreground
@@ -569,6 +573,7 @@ Item {
               Text { text: "ISO 8601 Full String:"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.muted }
               Text {
                 text: timeDashboard.now.toISOString()
+                textFormat: Text.PlainText
                 font.family: "Monospace"
                 font.pixelSize: Style.font.caption
                 color: Color.muted
@@ -1018,6 +1023,7 @@ Item {
               // UUID Text
               Text {
                 text: modelData
+                textFormat: Text.PlainText
                 font.family: "Monospace"
                 font.pixelSize: Style.font.bodySmall
                 font.weight: Font.Bold

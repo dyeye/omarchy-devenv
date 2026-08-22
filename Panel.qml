@@ -169,6 +169,7 @@ Panel {
                   Text {
                     id: titleText
                     text: root.project.name
+                    textFormat: Text.PlainText
                     font.family: Style.font.family
                     font.pixelSize: Style.font.bodySmall
                     font.weight: Font.Bold
@@ -233,6 +234,7 @@ Panel {
                   Text {
                     id: pathText
                     text: marqueeBox.shortPath
+                    textFormat: Text.PlainText
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
                     color: Color.muted
@@ -507,6 +509,7 @@ Panel {
 
                             Text {
                               text: modelData.name
+                              textFormat: Text.PlainText
                               font.family: Style.font.family
                               font.pixelSize: Style.font.caption
                               font.weight: modelData.path === root.project.path ? Font.Bold : Font.Normal
@@ -517,6 +520,7 @@ Panel {
 
                             Text {
                               text: Model.shortenPath(modelData.path)
+                              textFormat: Text.PlainText
                               font.family: Style.font.family
                               font.pixelSize: Style.font.caption
                               color: Color.muted
