@@ -404,7 +404,8 @@ Item {
           Rectangle {
             id: branchPill
             visible: root.git.hasRepo
-            Layout.preferredWidth: branchPillRow.implicitWidth + Style.space(12)
+            Layout.maximumWidth: Style.space(120)
+            Layout.preferredWidth: Math.min(Style.space(120), branchPillRow.implicitWidth + Style.space(12))
             Layout.preferredHeight: Style.space(22)
             radius: Style.cornerRadius
             color: brPillMouse.containsMouse ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.25) : Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.12)
@@ -413,10 +414,22 @@ Item {
 
             RowLayout {
               id: branchPillRow
-              anchors.centerIn: parent
+              anchors.fill: parent
+              anchors.leftMargin: Style.space(6)
+              anchors.rightMargin: Style.space(6)
               spacing: Style.space(4)
               Text { text: "󰊢"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.accent }
-              Text { text: root.git.branch || "HEAD"; textFormat: Text.PlainText; font.family: Style.font.family; font.pixelSize: Style.font.caption; font.weight: Font.Bold; color: Color.accent }
+              Text {
+                id: activeBranchText
+                text: root.git.branch || "HEAD"
+                textFormat: Text.PlainText
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.weight: Font.Bold
+                color: Color.accent
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+              }
               Text { text: "󰅂"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.accent }
             }
 
@@ -430,7 +443,7 @@ Item {
 
             PanelToolTip {
               visible: brPillMouse.containsMouse && !branchPopup.visible
-              text: "Click to switch branch (" + (root.git.branches ? root.git.branches.length : 0) + " available)"
+              text: (root.git.branch || "HEAD") + " (" + (root.git.branches ? root.git.branches.length : 0) + " branches • click to switch)"
             }
 
             // Branch Dropdown Menu Popup (Anchored directly to this pill)
@@ -438,8 +451,8 @@ Item {
               id: branchPopup
               x: 0
               y: parent.height + Style.space(4)
-              width: Style.space(170)
-              height: Math.min(Style.space(150), (root.git.branches ? root.git.branches.length * Style.space(28) + Style.space(12) : Style.space(36)))
+              width: Style.space(220)
+              height: Math.min(Style.space(160), (root.git.branches ? root.git.branches.length * Style.space(28) + Style.space(12) : Style.space(36)))
               padding: Style.space(4)
               closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
 
