@@ -344,6 +344,7 @@ Item {
 
               Text {
                 text: modelData.name
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.bodySmall
                 font.weight: Font.Medium
@@ -353,6 +354,7 @@ Item {
 
               Text {
                 text: modelData.image
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 color: Color.muted
@@ -364,6 +366,7 @@ Item {
             Text {
               Layout.preferredWidth: Style.space(90)
               text: modelData.ports || "no ports"
+              textFormat: Text.PlainText
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               color: Color.muted
@@ -435,6 +438,7 @@ Item {
 
                   Text {
                     text: "Stop " + modelData.name + "?"
+                    textFormat: Text.PlainText
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
                     font.weight: Font.Bold
@@ -555,6 +559,7 @@ Item {
 
                   Text {
                     text: "Restart " + modelData.name + "?"
+                    textFormat: Text.PlainText
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
                     font.weight: Font.Bold
@@ -692,6 +697,7 @@ Item {
             Layout.fillWidth: true
             Text {
               text: "󰈙 Logs: " + root.activeLogContainer
+              textFormat: Text.PlainText
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               font.weight: Font.Bold
@@ -756,6 +762,7 @@ Item {
             Text {
               id: logTextItem
               text: root.logOutputText !== "" ? root.logOutputText : "Loading logs..."
+              textFormat: Text.PlainText
               font.family: "Monospace"
               font.pixelSize: Style.font.caption
               color: Color.foreground

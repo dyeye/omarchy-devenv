@@ -416,7 +416,7 @@ Item {
               anchors.centerIn: parent
               spacing: Style.space(4)
               Text { text: "󰊢"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.accent }
-              Text { text: root.git.branch || "HEAD"; font.family: Style.font.family; font.pixelSize: Style.font.caption; font.weight: Font.Bold; color: Color.accent }
+              Text { text: root.git.branch || "HEAD"; textFormat: Text.PlainText; font.family: Style.font.family; font.pixelSize: Style.font.caption; font.weight: Font.Bold; color: Color.accent }
               Text { text: "󰅂"; font.family: Style.font.family; font.pixelSize: Style.font.caption; color: Color.accent }
             }
 
@@ -477,6 +477,7 @@ Item {
 
                     Text {
                       text: modelData
+                      textFormat: Text.PlainText
                       font.family: Style.font.family
                       font.pixelSize: Style.font.caption
                       font.weight: modelData === root.git.branch ? Font.Bold : Font.Normal
@@ -736,6 +737,7 @@ Item {
                 id: hashText
                 anchors.centerIn: parent
                 text: modelData.hash
+                textFormat: Text.PlainText
                 font.family: "Monospace"
                 font.pixelSize: Style.font.caption
                 font.weight: Font.Bold
@@ -779,6 +781,7 @@ Item {
                 Text {
                   id: cMsgText
                   text: modelData.message
+                  textFormat: Text.PlainText
                   font.family: Style.font.family
                   font.pixelSize: Style.font.bodySmall
                   font.weight: Font.Medium
@@ -815,6 +818,7 @@ Item {
 
               Text {
                 text: modelData.author + " • " + modelData.date
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 color: Color.muted
@@ -903,6 +907,7 @@ Item {
                 Text {
                   id: prTitleText
                   text: prTitleMarquee.fullPrTitle
+                  textFormat: Text.PlainText
                   font.family: Style.font.family
                   font.pixelSize: Style.font.bodySmall
                   font.weight: Font.Medium
@@ -939,6 +944,7 @@ Item {
 
               Text {
                 text: "by " + modelData.author + (modelData.headRefName ? " (" + modelData.headRefName + ")" : "")
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 color: Color.muted
@@ -1102,6 +1108,7 @@ Item {
                 Text {
                   id: issTitleText
                   text: issTitleMarquee.fullIssTitle
+                  textFormat: Text.PlainText
                   font.family: Style.font.family
                   font.pixelSize: Style.font.bodySmall
                   font.weight: Font.Medium
@@ -1138,6 +1145,7 @@ Item {
 
               Text {
                 text: "opened by " + modelData.author
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 color: Color.muted
@@ -1301,6 +1309,7 @@ Item {
                 Text {
                   id: stashMsgText
                   text: stashMsgMarquee.fullStashMsg
+                  textFormat: Text.PlainText
                   font.family: Style.font.family
                   font.pixelSize: Style.font.bodySmall
                   font.weight: Font.Medium
@@ -1337,6 +1346,7 @@ Item {
 
               Text {
                 text: modelData.date
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 color: Color.muted

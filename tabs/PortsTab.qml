@@ -152,6 +152,7 @@ Item {
 
               Text {
                 text: modelData.name
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 font.weight: Font.Bold
@@ -161,6 +162,7 @@ Item {
               Text {
                 visible: modelData.path !== ""
                 text: "(" + Model.shortenPath(modelData.path) + ")"
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 color: Color.muted
@@ -245,6 +247,7 @@ Item {
 
                   Text {
                     text: modelData.process + (modelData.pid > 0 ? " (PID " + modelData.pid + ")" : "")
+                    textFormat: Text.PlainText
                     font.family: Style.font.family
                     font.pixelSize: Style.font.bodySmall
                     font.weight: Font.Medium
@@ -254,6 +257,7 @@ Item {
 
                   Text {
                     text: modelData.ip
+                    textFormat: Text.PlainText
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
                     color: Color.muted
@@ -274,6 +278,7 @@ Item {
                     id: portText
                     anchors.centerIn: parent
                     text: ":" + modelData.port
+                    textFormat: Text.PlainText
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
                     font.weight: Font.Bold
@@ -424,7 +429,8 @@ Item {
                       spacing: Style.space(6)
 
                       Text {
-                        text: "Kill :" + modelData.port + "?"
+                        text: "Kill " + modelData.process + " (PID " + modelData.pid + ")?"
+                        textFormat: Text.PlainText
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         font.weight: Font.Bold
