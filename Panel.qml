@@ -76,8 +76,7 @@ Panel {
     }
   }
 
-  //
-   refresh timer
+  // Auto refresh timer
   Timer {
     id: scanTimer
     interval: 3000
@@ -349,7 +348,7 @@ Panel {
                     RowLayout {
                       Layout.fillWidth: true
                       Text {
-                        text:  Project Selection"
+                        text: " Project Selection"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         font.weight: Font.Bold

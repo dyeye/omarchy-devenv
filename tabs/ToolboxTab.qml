@@ -413,6 +413,7 @@ Item {
 
     // 4. UUID Tool View
     ColumnLayout {
+      id: uuidToolView
       visible: root.activeTool === "uuid"
       Layout.fillWidth: true
       Layout.fillHeight: true
@@ -441,7 +442,7 @@ Item {
           anchors.margins: Style.space(10)
 
           Text {
-            text: parent.parent.currentUuid
+            text: uuidToolView.currentUuid || ""
             font.family: "Monospace"
             font.pixelSize: Style.font.body
             font.weight: Font.Bold
