@@ -2,7 +2,11 @@
 
 > Local development mission control for **Omarchy / Hyprland**, built with **Quickshell (QML & JavaScript)**.
 
+![Omarchy DevEnv Preview](assets/poster.png)
+
 Omarchy DevEnv consolidates real-time port inspection, Docker container lifecycle controls, Git repository radar with GitHub integration, and an offline developer toolbox into a native status bar widget and keyboard-driven popout panel.
+
+![Omarchy DevEnv Demo](assets/devenv-demo-720p.gif)
 
 ---
 
