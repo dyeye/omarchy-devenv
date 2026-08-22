@@ -123,7 +123,14 @@ Install and enable the plugin directly using the official Omarchy CLI:
 omarchy plugin add https://github.com/dyeye/omarchy-devenv.git --enable
 ```
 
-### 2. Keyboard & Mouse Shortcuts
+### 2. Removal / Uninstall
+To safely remove and uninstall the plugin from Omarchy:
+
+```bash
+omarchy plugin remove dyeye.devenv
+```
+
+### 3. Keyboard & Mouse Shortcuts
 
 * **Bar Widget Status Icon:** `` (Closed) / `󰦭` (Opened).
 * **Mouse Controls:**
