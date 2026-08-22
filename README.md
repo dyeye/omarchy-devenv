@@ -116,23 +116,14 @@ Essential micro-tools that work 100% offline with instant Wayland clipboard copy
 * Hyprland compositor
 * Optional tools: `docker`, `git`, `gh` (GitHub CLI), `lazygit`, `ss`, `zenity`, `wl-clipboard`
 
-### 1. Install Plugin
-Clone the repository into your Omarchy user plugins directory:
+### 1. Install & Enable
+Install and enable the plugin directly using the official Omarchy CLI:
 
 ```bash
-git clone https://github.com/dyeye/omarchy-devenv.git ~/.config/omarchy/plugins/dyeye.devenv
+omarchy plugin add https://github.com/dyeye/omarchy-devenv.git --enable
 ```
 
-### 2. Add to Omarchy Bar
-Place the widget in your bar configuration:
-
-```bash
-omarchy bar put dyeye.devenv --before omarchy.agents
-```
-
-Or manually add `dyeye.devenv` into `~/.config/omarchy/shell.json` inside the `bar.layout.right` section.
-
-### 3. Keyboard & Mouse Shortcuts
+### 2. Keyboard & Mouse Shortcuts
 
 * **Bar Widget Status Icon:** `` (Closed) / `󰦭` (Opened).
 * **Mouse Controls:**

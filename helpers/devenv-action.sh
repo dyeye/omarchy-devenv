@@ -112,7 +112,7 @@ case "$ACTION" in
   git-stash-pop)
     DIR="${TARGET:-$HOME}"
     STASH_IDX="${EXTRA:-0}"
-    if [[ -d "$DIR" ]]; then
+    if [[ -d "$DIR" && "$STASH_IDX" =~ ^[0-9]+$ ]]; then
       git -C "$DIR" stash pop "stash@{$STASH_IDX}" >/dev/null 2>&1 || true
       echo "{\"success\":true,\"action\":\"git-stash-pop\",\"stash\":$STASH_IDX}"
     fi
