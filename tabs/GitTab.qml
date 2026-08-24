@@ -95,6 +95,7 @@ Item {
               Text {
                 id: gitRepoNameText
                 text: gitRepoNameMarqueeBox.repoTitle
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.bodySmall
                 font.weight: Font.Bold
@@ -137,7 +138,7 @@ Item {
 
               PanelToolTip {
                 visible: gitRepoNameHover.containsMouse
-                text: gitRepoNameMarqueeBox.repoTitle
+                text: Model.plain(gitRepoNameMarqueeBox.repoTitle)
               }
             }
 
@@ -160,6 +161,7 @@ Item {
               Text {
                 id: gitPathText
                 text: gitMarqueeBox.shortPath
+                textFormat: Text.PlainText
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 color: Color.muted
@@ -201,7 +203,7 @@ Item {
 
               PanelToolTip {
                 visible: gitPathHover.containsMouse
-                text: gitMarqueeBox.rawPath
+                text: Model.plain(gitMarqueeBox.rawPath)
               }
             }
           }
@@ -242,7 +244,7 @@ Item {
 
             PanelToolTip {
               visible: ghMouse.containsMouse
-              text: "Open github.com/" + root.git.githubRepo
+              text: "Open github.com/" + Model.plain(root.git.githubRepo)
             }
           }
 
@@ -443,7 +445,7 @@ Item {
 
             PanelToolTip {
               visible: brPillMouse.containsMouse && !branchPopup.visible
-              text: (root.git.branch || "HEAD") + " (" + (root.git.branches ? root.git.branches.length : 0) + " branches • click to switch)"
+              text: Model.plain(root.git.branch || "HEAD") + " (" + (root.git.branches ? root.git.branches.length : 0) + " branches • click to switch)"
             }
 
             // Branch Dropdown Menu Popup (Anchored directly to this pill)
@@ -843,7 +845,7 @@ Item {
 
           PanelToolTip {
             visible: commitMouse.containsMouse && !hashMouse.containsMouse
-            text: modelData.message + "\n" + modelData.author + " (" + modelData.date + ")"
+            text: Model.plain(modelData.message) + "\n" + Model.plain(modelData.author) + " (" + modelData.date + ")"
           }
         }
 
@@ -1005,7 +1007,7 @@ Item {
 
           PanelToolTip {
             visible: prRowMouse.containsMouse && !openPrMouse.containsMouse
-            text: "#" + modelData.number + " " + modelData.title + "\nby " + modelData.author
+            text: "#" + modelData.number + " " + Model.plain(modelData.title) + "\nby " + Model.plain(modelData.author)
           }
         }
 
@@ -1206,7 +1208,7 @@ Item {
 
           PanelToolTip {
             visible: issRowMouse.containsMouse && !openIssMouse.containsMouse
-            text: "#" + modelData.number + " " + modelData.title + "\nopened by " + modelData.author
+            text: "#" + modelData.number + " " + Model.plain(modelData.title) + "\nopened by " + Model.plain(modelData.author)
           }
         }
 
@@ -1410,7 +1412,7 @@ Item {
 
           PanelToolTip {
             visible: stashRowMouse.containsMouse && !popMouse.containsMouse
-            text: "stash@{" + modelData.index + "}: " + modelData.message + "\n" + modelData.date
+            text: "stash@{" + modelData.index + "}: " + Model.plain(modelData.message) + "\n" + modelData.date
           }
         }
 

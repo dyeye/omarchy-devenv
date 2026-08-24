@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 import qs.Ui
 import "../Model.js" as Model
@@ -153,6 +154,7 @@ Item {
         }
         Text {
           text: root.toastMessage
+          textFormat: Text.PlainText
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
           font.weight: Font.DemiBold
@@ -355,6 +357,23 @@ Item {
             color: Color.foreground
             wrapMode: TextEdit.WrapAnywhere
             background: Item {}
+
+            // Hard cap at paste/typing time so a multi-MB clipboard dump
+            // cannot stall the Quickshell UI thread before the tool
+            // functions even get a chance to reject it.
+            property bool capping: false
+            onTextChanged: {
+              if (capping)
+                return
+              if (text.length > Model.MAX_TOOLBOX_INPUT) {
+                capping = true
+                var pos = cursorPosition
+                text = text.substring(0, Model.MAX_TOOLBOX_INPUT)
+                cursorPosition = Math.min(pos, text.length)
+                capping = false
+                root.showToast("Input capped at 512 KB to keep the UI responsive")
+              }
+            }
           }
         }
       }
@@ -726,6 +745,20 @@ Item {
             color: Color.foreground
             wrapMode: TextEdit.WrapAnywhere
             background: Item {}
+
+            property bool capping: false
+            onTextChanged: {
+              if (capping)
+                return
+              if (text.length > Model.MAX_TOOLBOX_INPUT) {
+                capping = true
+                var pos = cursorPosition
+                text = text.substring(0, Model.MAX_TOOLBOX_INPUT)
+                cursorPosition = Math.min(pos, text.length)
+                capping = false
+                root.showToast("Input capped at 512 KB to keep the UI responsive")
+              }
+            }
           }
         }
       }
@@ -744,16 +777,48 @@ Item {
       property bool hyphens: true
       property int count: 1
       property var generatedList: []
+      property var entropyBytes: []
 
       Component.onCompleted: uuidToolView.regenerate()
 
+      // Pull fresh CSPRNG bytes from /dev/urandom before every batch so the
+      // generated UUIDs are cryptographically strong (no Math.random when
+      // entropy is available; falls back to it only if the read fails).
       function regenerate() {
+        entropyBytes = []
+        if (!uuidEntropyProc.running)
+          uuidEntropyProc.running = true
+        // If a fetch is already in flight, its completion handler will build
+        // the list using the then-current options.
+      }
+
+      function finishRegenerate() {
         uuidToolView.generatedList = Model.generateUuids({
           version: uuidToolView.uuidVersion,
           uppercase: uuidToolView.uppercase,
           hyphens: uuidToolView.hyphens,
-          count: uuidToolView.count
+          count: uuidToolView.count,
+          randBytes: uuidToolView.entropyBytes.length >= uuidToolView.count * 16 ? uuidToolView.entropyBytes : null
         })
+      }
+
+      Process {
+        id: uuidEntropyProc
+        command: ["od", "-An", "-v", "-tu1", "-N", "2048", "/dev/urandom"]
+        running: false
+        stdout: StdioCollector {
+          onStreamFinished: {
+            var parts = this.text.trim().split(/\s+/)
+            var bytes = []
+            for (var i = 0; i < parts.length && bytes.length < 2048; i++) {
+              var n = parseInt(parts[i], 10)
+              if (!isNaN(n) && n >= 0 && n <= 255)
+                bytes.push(n)
+            }
+            uuidToolView.entropyBytes = bytes
+            uuidToolView.finishRegenerate()
+          }
+        }
       }
 
       // Row 1: Version & Format Options

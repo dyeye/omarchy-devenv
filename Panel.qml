@@ -231,7 +231,7 @@ Panel {
 
                   PanelToolTip {
                     visible: titleHover.containsMouse
-                    text: root.project.name
+                    text: Model.plain(root.project.name)
                   }
                 }
 
@@ -295,7 +295,7 @@ Panel {
 
                   PanelToolTip {
                     visible: pathHover.containsMouse
-                    text: root.project.path
+                    text: Model.plain(root.project.path)
                   }
                 }
               }
@@ -346,7 +346,7 @@ Panel {
                 PanelToolTip {
                   visible: projPillMouse.containsMouse && !projectPopup.visible
                   text: root.project.isManual
-                    ? "Manual mode: Pinned to " + root.project.name + "\nClick to switch project or enable auto-detection"
+                    ? "Manual mode: Pinned to " + Model.plain(root.project.name) + "\nClick to switch project or enable auto-detection"
                     : "Auto-detect: Tracking focused window\nClick to pin a project or browse folder"
                 }
 
