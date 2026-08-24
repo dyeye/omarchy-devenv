@@ -2,6 +2,21 @@
 set -euo pipefail
 
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.local/share/mise/shims:$PATH"
+export GIT_TERMINAL_PROMPT=0
+export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=10"
+
+# Neutralize repo-local git config that can execute arbitrary commands.
+# Env-scoped config (command scope) takes precedence over .git/config, so a
+# malicious cloned repository cannot weaponize git invocations via
+# core.fsmonitor (runs on `git status`), core.pager, or core.hooksPath
+# (repo-supplied hooks like post-checkout / post-merge / pre-push).
+export GIT_CONFIG_COUNT=3
+export GIT_CONFIG_KEY_0="core.fsmonitor"
+export GIT_CONFIG_VALUE_0="false"
+export GIT_CONFIG_KEY_1="core.pager"
+export GIT_CONFIG_VALUE_1="cat"
+export GIT_CONFIG_KEY_2="core.hooksPath"
+export GIT_CONFIG_VALUE_2="/dev/null"
 
 if ! command -v gh >/dev/null 2>&1; then
   for gh_bin in "$HOME"/.local/share/mise/installs/gh/*/*/bin/gh; do
@@ -12,8 +27,10 @@ if ! command -v gh >/dev/null 2>&1; then
   done
 fi
 
-## Execute the memory-bounded Python scanner
-python3 - <<'EOF'
+## Execute the memory-bounded Python scanner.
+## `exec` replaces bash with python3 (same PID), so a SIGKILL from the QML
+## side terminates the actual scanner instead of orphaning it.
+exec python3 - <<'EOF'
 import os
 import sys
 import subprocess
@@ -23,6 +40,19 @@ import select
 import time
 import fcntl
 import signal as signal_mod
+
+os.environ["GIT_TERMINAL_PROMPT"] = "0"
+os.environ["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes -o ConnectTimeout=10"
+
+# Same repo-local git config neutralization as the bash header above, applied
+# explicitly so subprocesses spawned by this scanner are always covered.
+os.environ["GIT_CONFIG_COUNT"] = "3"
+os.environ["GIT_CONFIG_KEY_0"] = "core.fsmonitor"
+os.environ["GIT_CONFIG_VALUE_0"] = "false"
+os.environ["GIT_CONFIG_KEY_1"] = "core.pager"
+os.environ["GIT_CONFIG_VALUE_1"] = "cat"
+os.environ["GIT_CONFIG_KEY_2"] = "core.hooksPath"
+os.environ["GIT_CONFIG_VALUE_2"] = "/dev/null"
 
 home = os.environ.get("HOME", "/home/dyeye")
 search_roots = [
@@ -210,7 +240,7 @@ active_project_name = ""
 is_manual_mode = False
 
 pinned_file = os.path.join(home, ".local/state/omarchy/devenv/pinned_project.txt")
-if os.path.isfile(pinned_file):
+if os.path.isfile(pinned_file) and not os.path.islink(pinned_file):
     try:
         with open(pinned_file, "r") as pf:
             pcontent = pf.read(1024).strip()
@@ -491,7 +521,7 @@ if active_project_path and os.path.isdir(active_project_path):
 
         # Query GitHub PRs & Issues via gh CLI (bounded to 8 items, strict limits)
         if github_repo:
-            pr_raw = run_cmd(["gh", "pr", "list", "--limit", "8", "--json", "number,title,author,url,state,headRefName", "-C", git_root], max_bytes=16384, timeout=2.0)
+            pr_raw = run_cmd(["gh", "pr", "list", "--limit", "8", "--json", "number,title,author,url,state,headRefName"], cwd=git_root, max_bytes=16384, timeout=2.0)
             if pr_raw:
                 try:
                     pr_list = json.loads(pr_raw)
@@ -506,7 +536,7 @@ if active_project_path and os.path.isdir(active_project_path):
                 except Exception:
                     pass
 
-            iss_raw = run_cmd(["gh", "issue", "list", "--limit", "8", "--json", "number,title,author,url,state", "-C", git_root], max_bytes=16384, timeout=2.0)
+            iss_raw = run_cmd(["gh", "issue", "list", "--limit", "8", "--json", "number,title,author,url,state"], cwd=git_root, max_bytes=16384, timeout=2.0)
             if iss_raw:
                 try:
                     iss_list = json.loads(iss_raw)
@@ -634,11 +664,26 @@ if ss_raw:
                 except Exception:
                     pass
 
+        start_time = ""
+        if pid > 0:
+            try:
+                if os.path.exists(f"/proc/{pid}/stat"):
+                    with open(f"/proc/{pid}/stat", "r") as sf:
+                        stat_content = sf.read(1024)
+                        rparen = stat_content.rfind(')')
+                        if rparen != -1:
+                            rest = stat_content[rparen+2:].split()
+                            if len(rest) > 19:
+                                start_time = rest[19]
+            except Exception:
+                pass
+
         ports.append({
             "port": port,
             "ip": ip,
             "process": pname,
             "pid": pid,
+            "startTime": str_limit(start_time, 32),
             "categoryType": cat_type,
             "categoryName": cat_name,
             "categoryPath": cat_path

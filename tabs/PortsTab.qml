@@ -199,7 +199,7 @@ Item {
 
             PanelToolTip {
               visible: headerMouse.containsMouse
-              text: (groupDelegate.isCollapsed ? "Click to expand " : "Click to collapse ") + modelData.name
+              text: (groupDelegate.isCollapsed ? "Click to expand " : "Click to collapse ") + Model.plain(modelData.name)
             }
           }
 
@@ -407,7 +407,7 @@ Item {
 
                   PanelToolTip {
                     visible: killMouse.containsMouse && !confirmPopup.visible
-                    text: modelData.pid > 0 ? "Kill process " + modelData.process + " (PID " + modelData.pid + ")" : "Kill port :" + modelData.port
+                    text: modelData.pid > 0 ? "Kill process " + Model.plain(modelData.process) + " (PID " + modelData.pid + ")" : "Kill port :" + modelData.port
                   }
 
                   // Compact micro confirmation popup
@@ -464,9 +464,19 @@ Item {
                             confirmPopup.close()
                             if (actionProc) {
                               if (modelData.pid > 0) {
-                                actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-pid", String(modelData.pid)]
+                                actionProc.command = [
+                                  Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""),
+                                  "kill-pid",
+                                  String(modelData.pid),
+                                  String(modelData.process || ""),
+                                  String(modelData.startTime || "")
+                                ]
                               } else {
-                                actionProc.command = [Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""), "kill-port", String(modelData.port)]
+                                actionProc.command = [
+                                  Qt.resolvedUrl("../helpers/devenv-action.sh").toString().replace("file://", ""),
+                                  "kill-port",
+                                  String(modelData.port)
+                                ]
                               }
                               actionProc.running = true
                               Qt.callLater(root.onRefresh)

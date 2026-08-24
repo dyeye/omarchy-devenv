@@ -122,6 +122,7 @@ function parseScan(rawOutput) {
           ip: _str(p.ip, 48),
           process: _str(p.process, 64),
           pid: _num(p.pid, 4194304),
+          startTime: _str(p.startTime, 32),
           categoryType: _str(p.categoryType, 16) || "process",
           categoryName: _str(p.categoryName, 64),
           categoryPath: _str(p.categoryPath, 256)
@@ -210,6 +211,15 @@ function groupPorts(portsList) {
   return result;
 }
 
+// Escape text that may contain HTML metacharacters before handing it to
+// components whose Text uses the default Text.AutoText (e.g. PanelToolTip).
+// Without this, repository/PR/commit data containing "<b>" or "<img src=...>"
+// would be interpreted as rich text (remote image fetch included).
+function plain(s) {
+  if (s === undefined || s === null) return "";
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function shortenPath(p) {
   if (!p) return "";
   var str = String(p);
@@ -278,8 +288,11 @@ function copyToClipboard(text) {
 
 // ---------------------------------------------------------------- Toolbox Helpers
 
+var MAX_TOOLBOX_INPUT = 524288; // 512 KB limit to protect UI responsiveness
+
 function formatJson(input, indent) {
   if (!input || input.trim() === "") return "";
+  if (input.length > MAX_TOOLBOX_INPUT) throw new Error("Input exceeds size limit (512 KB)");
   var spaces = typeof indent === "number" ? indent : 2;
   var parsed = JSON.parse(input);
   return JSON.stringify(parsed, null, spaces);
@@ -287,12 +300,14 @@ function formatJson(input, indent) {
 
 function minifyJson(input) {
   if (!input || input.trim() === "") return "";
+  if (input.length > MAX_TOOLBOX_INPUT) throw new Error("Input exceeds size limit (512 KB)");
   var parsed = JSON.parse(input);
   return JSON.stringify(parsed);
 }
 
 function validateJson(input) {
   if (!input || input.trim() === "") return { valid: false, error: "Empty input" };
+  if (input.length > MAX_TOOLBOX_INPUT) return { valid: false, error: "Input exceeds size limit (512 KB)" };
   try {
     var parsed = JSON.parse(input);
     var isArr = Array.isArray(parsed);
@@ -309,7 +324,7 @@ function validateJson(input) {
 
 function timestampToDate(timestampStr) {
   var n = Number(timestampStr);
-  if (!isFinite(n) || n <= 0) return { valid: false, error: "Invalid Timestamp" };
+  if (!isFinite(n) || n <= 0 || isNaN(n)) return { valid: false, error: "Invalid Timestamp" };
   var ms = n < 10000000000 ? n * 1000 : n;
   var d = new Date(ms);
   if (isNaN(d.getTime())) return { valid: false, error: "Invalid Timestamp" };
@@ -363,6 +378,7 @@ function formatRelativeTime(d) {
 
 function base64Encode(str) {
   if (!str) return "";
+  if (str.length > MAX_TOOLBOX_INPUT) return "Error: Input exceeds size limit (512 KB)";
   try {
     if (typeof TextEncoder !== "undefined") {
       return Qt.btoa(new TextEncoder().encode(str));
@@ -375,6 +391,7 @@ function base64Encode(str) {
 
 function base64Decode(str) {
   if (!str) return "";
+  if (str.length > MAX_TOOLBOX_INPUT) return "Error: Input exceeds size limit (512 KB)";
   try {
     var res = Qt.atob(str.trim());
     if (typeof TextDecoder !== "undefined" && res instanceof ArrayBuffer) {
@@ -395,10 +412,14 @@ function base64Decode(str) {
 }
 
 function urlEncode(str) {
+  if (!str) return "";
+  if (str.length > MAX_TOOLBOX_INPUT) return "Error: Input exceeds size limit (512 KB)";
   return encodeURIComponent(str || "");
 }
 
 function urlDecode(str) {
+  if (!str) return "";
+  if (str.length > MAX_TOOLBOX_INPUT) return "Error: Input exceeds size limit (512 KB)";
   try {
     return decodeURIComponent(str || "");
   } catch (e) {
@@ -406,33 +427,52 @@ function urlDecode(str) {
   }
 }
 
-function generateUuidV4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0;
-    var v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+// Builds a random-byte source. When the UI supplies bytes read from
+// /dev/urandom (options.randBytes), UUIDs are cryptographically strong;
+// otherwise we fall back to Math.random (NOT suitable for security tokens).
+function _makeByteRand(randBytes) {
+  if (Array.isArray(randBytes) && randBytes.length > 0) {
+    var idx = 0;
+    return function() {
+      var b = randBytes[idx % randBytes.length];
+      idx++;
+      return (typeof b === "number" && isFinite(b) ? b : 0) & 0xff;
+    };
+  }
+  return function() { return Math.floor(Math.random() * 256); };
 }
 
-function generateUuidV7() {
+function _byteHex(b) {
+  return ("0" + (b & 0xff).toString(16)).slice(-2);
+}
+
+function generateUuidV4(rand) {
+  var r = typeof rand === "function" ? rand : _makeByteRand(null);
+  var b = [];
+  for (var i = 0; i < 16; i++) b.push(r());
+  b[6] = (b[6] & 0x0f) | 0x40; // version 4
+  b[8] = (b[8] & 0x3f) | 0x80; // variant 10xx
+  var h = "";
+  for (var j = 0; j < 16; j++) h += _byteHex(b[j]);
+  return h.substring(0, 8) + "-" + h.substring(8, 12) + "-" + h.substring(12, 16) + "-" + h.substring(16, 20) + "-" + h.substring(20, 32);
+}
+
+function generateUuidV7(rand) {
+  var r = typeof rand === "function" ? rand : _makeByteRand(null);
   var now = Date.now();
   var hexTime = now.toString(16);
   while (hexTime.length < 12) hexTime = "0" + hexTime;
-  var p1 = hexTime.substring(0, 8);
-  var p2 = hexTime.substring(8, 12);
-  var randHex = "";
-  for (var i = 0; i < 18; i++) {
-    randHex += Math.floor(Math.random() * 16).toString(16);
-  }
-  var p3 = "7" + randHex.substring(0, 3);
-  var varDigit = (8 + Math.floor(Math.random() * 4)).toString(16);
-  var p4 = varDigit + randHex.substring(3, 6);
-  var p5 = randHex.substring(6, 18);
-  return p1 + "-" + p2 + "-" + p3 + "-" + p4 + "-" + p5;
+  var b = [];
+  for (var i = 0; i < 10; i++) b.push(r());
+  b[0] = (b[0] & 0x0f) | 0x70; // version 7 nibble after the 48-bit timestamp
+  b[2] = (b[2] & 0x3f) | 0x80; // variant 10xx
+  var h = "";
+  for (var j = 0; j < 10; j++) h += _byteHex(b[j]);
+  return hexTime.substring(0, 8) + "-" + hexTime.substring(8, 12) + "-" + h.substring(0, 4) + "-" + h.substring(4, 8) + "-" + h.substring(8, 20);
 }
 
-function generateUuid(version) {
-  return version === "v7" ? generateUuidV7() : generateUuidV4();
+function generateUuid(version, rand) {
+  return version === "v7" ? generateUuidV7(rand) : generateUuidV4(rand);
 }
 
 function generateUuids(options) {
@@ -441,10 +481,12 @@ function generateUuids(options) {
   var version = opt.version || "v4";
   var uppercase = opt.uppercase === true;
   var hyphens = opt.hyphens !== false;
+  // Only trust the supplied entropy if there is enough of it for the batch.
+  var rand = _makeByteRand(Array.isArray(opt.randBytes) && opt.randBytes.length >= count * 16 ? opt.randBytes : null);
   var results = [];
 
   for (var i = 0; i < count; i++) {
-    var uid = version === "v7" ? generateUuidV7() : generateUuidV4();
+    var uid = version === "v7" ? generateUuidV7(rand) : generateUuidV4(rand);
     if (!hyphens) {
       uid = uid.replace(/-/g, "");
     }

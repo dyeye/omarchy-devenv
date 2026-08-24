@@ -70,7 +70,7 @@ BarWidget {
     anchors.fill: parent
     bar: root.bar
     text: root.opened ? "󰦭" : ""
-    tooltipText: "DevEnv (" + root.projectName + ")"
+    tooltipText: "DevEnv (" + Model.plain(root.projectName) + ")"
 
     onPressed: function(b) {
       if (!root.bar) return
